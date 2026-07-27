@@ -141,6 +141,16 @@ export function Footer() {
         </div>
       </div>
 
+      {/* Important Notice */}
+      <div className="border-t border-background/10">
+        <div className="container py-6">
+          <p className="text-background/60 text-sm text-center">
+            <span className="font-semibold text-background/80">Important Notice:</span>{' '}
+            Our contact details may appear on invoices not issued by us. Please verify all invoices directly with our team before making any payment. We accept no liability for payments made against invoices not issued or authorized by us.
+          </p>
+        </div>
+      </div>
+
       {/* Bottom Bar */}
       <div className="border-t border-background/10">
         <div className="container py-6 flex flex-col md:flex-row justify-between items-center gap-4">
