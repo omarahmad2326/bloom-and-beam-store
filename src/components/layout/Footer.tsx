@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Mail, Phone, MapPin, Facebook, Twitter, Linkedin, Instagram, AlertTriangle } from 'lucide-react';
+import { Mail, Phone, MapPin, Facebook, Twitter, Linkedin, Instagram, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useContactInfo } from '@/hooks/useContactInfo';
@@ -144,10 +144,10 @@ export function Footer() {
       {/* Important Notice */}
       <div className="border-t border-background/10">
         <div className="container py-6">
-          <div className="flex items-start md:items-center justify-center gap-3 rounded-lg border border-warning/30 bg-warning/10 px-5 py-4">
-            <AlertTriangle className="h-5 w-5 shrink-0 text-warning mt-0.5 md:mt-0" />
-            <p className="text-warning text-sm md:text-base text-left md:text-center">
-              <span className="font-semibold">Important Notice:</span>{' '}
+          <div className="flex items-start md:items-center justify-center gap-3 rounded-xl bg-background/5 px-5 py-4">
+            <Info className="h-4 w-4 shrink-0 text-primary/70 mt-0.5 md:mt-0" />
+            <p className="text-background/60 text-sm leading-relaxed text-left md:text-center max-w-4xl">
+              <span className="font-medium text-background/80">Important Notice:</span>{' '}
               Our contact details may appear on invoices not issued by us. Please verify all invoices directly with our team before making any payment. We accept no liability for payments made against invoices not issued or authorized by us.
             </p>
           </div>
