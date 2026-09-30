@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local environment / Supabase CLI
+.env
+.env.*
+supabase/.temp/
+supabase/*.before-production-migration
