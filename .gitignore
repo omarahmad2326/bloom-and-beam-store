@@ -30,3 +30,8 @@ supabase/.temp/
 supabase/*.before-production-migration
 
 !.env.example
+.next/
+next-env.d.ts
+*.tsbuildinfo
+.next-build/
+.next-old/

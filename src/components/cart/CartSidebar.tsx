@@ -1,5 +1,5 @@
 import { X, Minus, Plus, ShoppingBag, Trash2, Package } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link } from '@/lib/router';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -71,7 +71,7 @@ export function CartSidebar() {
                     </div>
                     <div className="flex-1">
                       <h4 className="font-medium mb-1 line-clamp-1">{item.product.name}</h4>
-                      <p className="text-primary font-bold">${item.product.price.toLocaleString()}</p>
+                      <p className="text-primary font-bold">{'$' + item.product.price.toLocaleString('en-US')}</p>
                       <div className="flex items-center justify-between mt-3">
                         <div className="flex items-center gap-2 bg-background rounded-lg p-1">
                           <button
@@ -109,7 +109,7 @@ export function CartSidebar() {
             <div className="border-t p-6 space-y-4">
               <div className="flex items-center justify-between text-lg">
                 <span className="font-medium">Subtotal</span>
-                <span className="font-display font-bold">${getTotal().toLocaleString()}</span>
+                <span className="font-display font-bold">{'$' + getTotal().toLocaleString('en-US')}</span>
               </div>
               <p className="text-sm text-muted-foreground">
                 Shipping and taxes calculated at checkout

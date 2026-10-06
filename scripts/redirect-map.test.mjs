@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildMap } from './redirect-map.mjs';
+import { buildMap, idAliases } from './redirect-map.mjs';
 
 /** Parse the generated map and emulate nginx: exact keys (case-insensitive) first, then regexes in order. */
 function nginx(mapText) {
@@ -75,5 +75,30 @@ describe('nginx redirect map', () => {
   it('dedupes keys that differ only in case', () => {
     const out = buildMap([{ from_path: '/Old', to_path: '/a' }, { from_path: '/old', to_path: '/b' }], []);
     expect(() => nginx(out)).not.toThrow();
+  });
+});
+
+describe('ID URLs redirect to slug URLs (so the canonical is never the ID version)', () => {
+  const aliases = idAliases([
+    { prefix: '/products/', id: '059b8ada-b15f-4c96-a573-bbee764b6b3c', slug: 'low-air-loss-burn-bed' },
+    { prefix: '/blog/', id: '11111111-2222-3333-4444-555555555555', slug: 'hospital-bed-sale-in-dallas-tx' },
+    { prefix: '/part/', id: 'aaaa', slug: null },
+    { prefix: '/part/', id: 'bbbb', slug: 'Legacy_Slug' },
+  ]);
+
+  it('maps /products/{id} and /blog/{id} to their slugs; skips missing/legacy slugs', () => {
+    expect(aliases.map((a) => [a.from_path, a.to_path])).toEqual([
+      ['/products/059b8ada-b15f-4c96-a573-bbee764b6b3c', '/products/low-air-loss-burn-bed'],
+      ['/blog/11111111-2222-3333-4444-555555555555', '/blog/hospital-bed-sale-in-dallas-tx'],
+    ]);
+  });
+
+  it('explicit redirects win over ID aliases for the same URL', () => {
+    const map = buildMap(
+      [...aliases, { from_path: '/products/059b8ada-b15f-4c96-a573-bbee764b6b3c', to_path: '/products/other' }],
+      [],
+    );
+    expect(map).toContain('"/products/059b8ada-b15f-4c96-a573-bbee764b6b3c" "/products/other";');
+    expect(map).not.toContain('"/products/059b8ada-b15f-4c96-a573-bbee764b6b3c" "/products/low-air-loss-burn-bed";');
   });
 });

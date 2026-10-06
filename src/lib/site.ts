@@ -1,5 +1,5 @@
 /** Public origin used for canonical URLs and structured data. */
-export const SITE_URL = (import.meta.env.VITE_SITE_URL || 'https://mrbedmed.com').replace(/\/+$/, '');
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://mrbedmed.com').replace(/\/+$/, '');
 
 /** Organization name used in structured data. */
 export const SITE_NAME = 'Mrbedmed';

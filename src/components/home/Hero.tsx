@@ -1,10 +1,9 @@
-import { Link } from 'react-router-dom';
+import { Link } from '@/lib/router';
 import { Button } from '@/components/ui/button';
 import { QuoteButton } from '@/components/QuoteButton';
 import { ArrowRight, Shield, CheckCircle, Truck } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import heroHospitalBed from '@/assets/products/hero-hospital-bed.png';
+import { useQuery } from '@tanstack/react-query';
+import { queries } from '@/queries';
 import { resolveAlt } from '@/lib/imageAlt';
 
 interface HeroSettings {
@@ -45,25 +44,11 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 };
 
 export function Hero() {
-  const [settings, setSettings] = useState<HeroSettings>(defaultHeroSettings);
+  // Hero content from Dashboard → Site Settings (prefetched on the server).
+  const { data: saved } = useQuery(queries.heroSettings());
+  const settings: HeroSettings = (saved as HeroSettings | null) ?? defaultHeroSettings;
 
-  useEffect(() => {
-    const fetchHeroSettings = async () => {
-      const { data, error } = await supabase
-        .from('site_settings')
-        .select('value')
-        .eq('key', 'hero')
-        .maybeSingle();
-
-      if (!error && data?.value) {
-        setSettings(data.value as unknown as HeroSettings);
-      }
-    };
-
-    fetchHeroSettings();
-  }, []);
-
-  const heroImage = settings.hero_image_url || heroHospitalBed;
+  const heroImage = settings.hero_image_url || '/images/hero-hospital-bed.png';
 
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-background via-accent/30 to-background">

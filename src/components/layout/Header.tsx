@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useLocation, useNavigate } from '@/lib/router';
 import { Menu, X, ShoppingCart, Phone, Search, User, LogOut, ChevronDown, Package, Settings } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
+import { queries } from '@/queries';
 import { telHref, FALLBACK_PHONE } from '@/components/CallButton';
 import { useContactInfo } from '@/hooks/useContactInfo';
 import {
@@ -38,18 +39,6 @@ interface CategoryItem {
   slug: string;
 }
 
-interface HomeServiceCard {
-  id: string;
-  title: string;
-}
-
-interface HomeServiceCardItem {
-  id: string;
-  card_id: string;
-  name: string;
-  slug: string;
-}
-
 const aboutBedmedLinks = [
   { name: 'Blog', path: '/blog' },
   { name: 'FAQ', path: '/faq' },
@@ -74,44 +63,13 @@ export function Header() {
   const navigate = useNavigate();
   const itemCount = getItemCount();
 
-  // State for database categories
-  const [hospitalBedCategories, setHospitalBedCategories] = useState<CategoryItem[]>([]);
-  const [stretcherCategories, setStretcherCategories] = useState<CategoryItem[]>([]);
-  const [accessoryCategories, setAccessoryCategories] = useState<CategoryItem[]>([]);
-
-  useEffect(() => {
-    const fetchCategories = async () => {
-      // Fetch home service cards and their items
-      const { data: cards } = await supabase
-        .from('home_service_cards')
-        .select('*')
-        .order('sort_order', { ascending: true });
-
-      const { data: items } = await supabase
-        .from('home_service_card_items')
-        .select('*')
-        .order('sort_order', { ascending: true });
-
-      if (cards && items) {
-        // Find cards by title
-        const bedsCard = cards.find(c => c.title.toLowerCase().includes('bed'));
-        const stretchersCard = cards.find(c => c.title.toLowerCase().includes('stretcher'));
-        const accessoriesCard = cards.find(c => c.title.toLowerCase().includes('accessor'));
-
-        if (bedsCard) {
-          setHospitalBedCategories(items.filter(i => i.card_id === bedsCard.id));
-        }
-        if (stretchersCard) {
-          setStretcherCategories(items.filter(i => i.card_id === stretchersCard.id));
-        }
-        if (accessoriesCard) {
-          setAccessoryCategories(items.filter(i => i.card_id === accessoriesCard.id));
-        }
-      }
-    };
-
-    fetchCategories();
-  }, []);
+  // Menu categories from the home service cards (prefetched on the server, so the menu is in the HTML).
+  const { data: menu = [] } = useQuery(queries.homeMenu());
+  const itemsFor = (match: string): CategoryItem[] =>
+    menu.find((c) => c.title.toLowerCase().includes(match))?.items ?? [];
+  const hospitalBedCategories = itemsFor('bed');
+  const stretcherCategories = itemsFor('stretcher');
+  const accessoryCategories = itemsFor('accessor');
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, afterEach, beforeEach } from 'vitest';
-import { render, cleanup, waitFor, fireEvent, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes, Link } from 'react-router-dom';
+import { render, cleanup, waitFor, screen } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 let productRow: Record<string, unknown> | null = null;
@@ -24,9 +24,7 @@ vi.mock('@/components/layout/Layout', () => ({ Layout: ({ children }: { children
 vi.mock('@/context/CartContext', () => ({ useCart: () => ({ addToCart: vi.fn() }) }));
 
 import { canonicalFor } from '@/lib/site';
-import { CanonicalSync } from './CanonicalSync';
-import { SEOHead } from './SEOHead';
-import ProductDetail from '@/pages/ProductDetail';
+import ProductDetail from '@/views/ProductDetail';
 
 const canonical = () => document.head.querySelectorAll('link[rel="canonical"]');
 
@@ -42,36 +40,6 @@ describe('canonicalFor (same rule as nginx)', () => {
   });
 });
 
-describe('in-app navigation', () => {
-  it('keeps exactly one canonical, following the current page', async () => {
-    render(
-      <MemoryRouter initialEntries={['/']}>
-        <CanonicalSync />
-        <Link to="/about-us">About</Link>
-        <Routes>
-          <Route path="/" element={<p>home</p>} />
-          <Route path="/about-us" element={<p>about</p>} />
-        </Routes>
-      </MemoryRouter>,
-    );
-    expect(canonical()).toHaveLength(1);
-    expect((canonical()[0] as HTMLLinkElement).href).toBe('https://mrbedmed.com/');
-    fireEvent.click(screen.getByText('About'));
-    await waitFor(() => expect((canonical()[0] as HTMLLinkElement).href).toBe('https://mrbedmed.com/about-us'));
-    expect(canonical()).toHaveLength(1);
-  });
-
-  it('SEOHead without an explicit canonical never removes the tag', () => {
-    render(
-      <MemoryRouter initialEntries={['/faq']}>
-        <CanonicalSync />
-        <SEOHead title="FAQ" />
-      </MemoryRouter>,
-    );
-    expect(canonical()).toHaveLength(1);
-  });
-});
-
 describe('product opened by ID', () => {
   it('switches to the slug URL so the canonical is the slug version', async () => {
     productRow = {
@@ -83,7 +51,6 @@ describe('product opened by ID', () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
         <MemoryRouter initialEntries={['/products/059b8ada-b15f-4c96-a573-bbee764b6b3c']}>
-          <CanonicalSync />
           <Routes>
             <Route path="/products/:id" element={<><ProductDetail /><LocationProbe /></>} />
           </Routes>
@@ -91,7 +58,6 @@ describe('product opened by ID', () => {
       </QueryClientProvider>,
     );
     await waitFor(() => expect(screen.getByTestId('path').textContent).toBe('/products/low-air-loss-burn-bed'));
-    await waitFor(() => expect((canonical()[0] as HTMLLinkElement).href).toBe('https://mrbedmed.com/products/low-air-loss-burn-bed'));
   });
 });
 

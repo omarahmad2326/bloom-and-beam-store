@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '@/lib/router';
 import { renderableHtml } from '@/lib/content';
 import { cn } from '@/lib/utils';
 

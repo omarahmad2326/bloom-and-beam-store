@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { queries } from '@/queries';
+import { Link } from '@/lib/router';
 import { Bed, Ambulance, Armchair, Stethoscope, HeartPulse, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
 
 interface ServiceItem {
   id: string;
@@ -77,38 +78,9 @@ const fallbackCategories = [
 
 export function ServicesCards() {
   const [activeCard, setActiveCard] = useState<string | null>(null);
-  const [serviceCategories, setServiceCategories] = useState<ServiceCard[]>(fallbackCategories);
-
-  useEffect(() => {
-    const fetchCards = async () => {
-      const { data: cardsData, error: cardsError } = await supabase
-        .from('home_service_cards')
-        .select('*')
-        .order('sort_order', { ascending: true });
-
-      if (cardsError || !cardsData || cardsData.length === 0) {
-        return; // Use fallback data
-      }
-
-      const { data: itemsData, error: itemsError } = await supabase
-        .from('home_service_card_items')
-        .select('*')
-        .order('sort_order', { ascending: true });
-
-      if (itemsError) {
-        return; // Use fallback data
-      }
-
-      const cardsWithItems = cardsData.map(card => ({
-        ...card,
-        items: (itemsData || []).filter(item => item.card_id === card.id)
-      }));
-
-      setServiceCategories(cardsWithItems);
-    };
-
-    fetchCards();
-  }, []);
+  // Cards from Dashboard → Home Cards (shared with the header menu; prefetched on the server).
+  const { data: menu } = useQuery(queries.homeMenu());
+  const serviceCategories: ServiceCard[] = menu && menu.length > 0 ? menu : fallbackCategories;
 
   return (
     <section className="py-20 md:py-28 bg-muted/30">

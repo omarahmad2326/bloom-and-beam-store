@@ -13,7 +13,10 @@ vi.mock('@/integrations/supabase/client', () => {
   const from = (table: string) => {
     const q = {
       select: () => q, eq: () => q, ilike: () => q, or: () => q, order: () => q, limit: () => q, in: () => q,
-      maybeSingle: async () => ({ data: table === 'categories' ? category : null, error: null }),
+      maybeSingle: async () => ({
+        data: table === 'categories' ? category : table === 'site_settings' && contactPhone ? { value: { phone: contactPhone } } : null,
+        error: null,
+      }),
       single: async () => (table === 'site_settings' && contactPhone
         ? { data: { value: { phone: contactPhone } }, error: null }
         : { data: null, error: { code: 'PGRST116' } }),
@@ -27,7 +30,7 @@ vi.mock('@/components/layout/Layout', () => ({ Layout: ({ children }: { children
 vi.mock('@/context/CartContext', () => ({ useCart: () => ({ addToCart: vi.fn() }) }));
 
 import { CallButton, telHref } from './CallButton';
-import CategoryDetail from '@/pages/CategoryDetail';
+import CategoryDetail from '@/views/CategoryDetail';
 
 afterEach(() => { cleanup(); contactPhone = null; });
 
@@ -35,7 +38,7 @@ const client = () => new QueryClient({ defaultOptions: { queries: { retry: false
 
 describe('CallButton', () => {
   it('is a click-to-call link with readable colours on dark boxes', () => {
-    render(<CallButton tone="onDark" />);
+    render(<QueryClientProvider client={client()}><CallButton tone="onDark" /></QueryClientProvider>);
     const link = screen.getByRole('link', { name: 'Call +1 469 767 8853' });
     expect(link.getAttribute('href')).toBe('tel:+14697678853');
     // Never white text on a white background at rest.
@@ -46,7 +49,7 @@ describe('CallButton', () => {
 
   it('uses the phone number from Contact Info', async () => {
     contactPhone = '+1 (214) 555-0100';
-    render(<CallButton />);
+    render(<QueryClientProvider client={client()}><CallButton /></QueryClientProvider>);
     const link = await screen.findByRole('link', { name: 'Call +1 (214) 555-0100' });
     expect(link.getAttribute('href')).toBe('tel:+12145550100');
   });

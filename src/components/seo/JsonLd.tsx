@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { parseCustomSchema } from '@/lib/schema';
 
 interface JsonLdProps {
@@ -7,22 +6,15 @@ interface JsonLdProps {
   data: object | object[] | null | undefined;
 }
 
-/** Outputs <script type="application/ld+json"> in <head> while mounted. */
+/**
+ * Outputs <script type="application/ld+json"> as part of the page HTML, so it is in the
+ * server-rendered source that Google reads (not added later by JavaScript).
+ * "<" is escaped so the JSON can never close the script tag.
+ */
 export function JsonLd({ id, data }: JsonLdProps) {
-  const json = data ? JSON.stringify(data) : '';
-
-  useEffect(() => {
-    if (!json) return;
-    document.head.querySelectorAll(`script[data-schema="${id}"]`).forEach((el) => el.remove());
-    const script = document.createElement('script');
-    script.type = 'application/ld+json';
-    script.dataset.schema = id;
-    script.textContent = json.replace(/</g, '\\u003c');
-    document.head.appendChild(script);
-    return () => script.remove();
-  }, [id, json]);
-
-  return null;
+  if (!data) return null;
+  const json = JSON.stringify(data).replace(/</g, '\\u003c');
+  return <script type="application/ld+json" data-schema={id} dangerouslySetInnerHTML={{ __html: json }} />;
 }
 
 /** Renders the admin-entered "Custom schema (JSON-LD)" box; invalid JSON is ignored. */

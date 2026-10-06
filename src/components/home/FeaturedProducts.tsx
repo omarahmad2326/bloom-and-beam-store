@@ -1,13 +1,13 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from '@/lib/router';
 import { ArrowRight, ShoppingCart, Eye, Star, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { toPlainText } from '@/lib/content';
 import { resolveAlt } from '@/lib/imageAlt';
+import { queries } from '@/queries';
 
 interface DBProduct {
   id: string;
@@ -29,20 +29,7 @@ export function FeaturedProducts() {
   const { addToCart } = useCart();
   const { toast } = useToast();
 
-  const { data: products, isLoading } = useQuery({
-    queryKey: ['featuredProducts'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('in_stock', true)
-        .order('created_at', { ascending: false })
-        .limit(4);
-      
-      if (error) throw error;
-      return data as DBProduct[];
-    },
-  });
+  const { data: products, isLoading } = useQuery(queries.featuredProducts());
 
   const handleAddToCart = (product: DBProduct, e: React.MouseEvent) => {
     e.preventDefault();
@@ -185,11 +172,11 @@ export function FeaturedProducts() {
 
                   <div className="flex items-center gap-3">
                     <span className="font-display font-bold text-xl text-primary">
-                      ${product.price.toLocaleString()}
+                      {'$' + product.price.toLocaleString('en-US')}
                     </span>
                     {product.original_price && (
                       <span className="text-muted-foreground line-through">
-                        ${product.original_price.toLocaleString()}
+                        {'$' + product.original_price.toLocaleString('en-US')}
                       </span>
                     )}
                   </div>

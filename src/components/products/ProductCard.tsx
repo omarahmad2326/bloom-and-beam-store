@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from '@/lib/router';
 import { ShoppingCart, Star, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Product } from '@/data/products';
@@ -114,11 +114,11 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
 
         <div className="flex items-center gap-3">
           <span className="font-display font-bold text-xl text-primary">
-            ${product.price.toLocaleString()}
+            {'$' + product.price.toLocaleString('en-US')}
           </span>
           {product.originalPrice && (
             <span className="text-muted-foreground line-through">
-              ${product.originalPrice.toLocaleString()}
+              {'$' + product.originalPrice.toLocaleString('en-US')}
             </span>
           )}
         </div>
