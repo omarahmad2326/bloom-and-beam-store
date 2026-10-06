@@ -109,8 +109,6 @@ chmod 644 "$CRON"
 ok "$CRON"
 
 printf '\n   Check (expect 301 + location):\n'
-{ curl -skI --max-time 5 --resolve mrbedmed.com:443:127.0.0.1 "https://mrbedmed.com/category/ICU-beds" 2>/dev/null \
-  || curl -sI --max-time 5 -H 'Host: mrbedmed.com' "http://127.0.0.1/category/ICU-beds"; } \
-  | grep -iE '^(HTTP|location)' | sed 's/^/     /' || true
+sleep 2; curl -sI --max-time 10 "https://mrbedmed.com/category/ICU-beds" | grep -iE '^(HTTP|location)' | sed 's/^/     /' || true
 printf '\n\033[1;32mDone.\033[0m Redirects added in Dashboard → Redirects go live within a minute.\n'
 printf 'Undo: restore files from %s, then rm %s %s && nginx -s reload\n' "$BACKUP" "$CONF" "$CRON"
