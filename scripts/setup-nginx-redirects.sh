@@ -31,7 +31,7 @@ NODE="$(command -v node)" || die "node not found"
 [ -f "$APP_DIR/.env" ] || die "$APP_DIR/.env missing"
 
 log "1/5 Locate the nginx site serving $APP_DIR"
-mapfile -t SITES < <(grep -lRs -- "$APP_DIR" /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null | grep -v "$CONF" | xargs -r -n1 readlink -f | sort -u)
+mapfile -t SITES < <(grep -lRsE "^[[:space:]]*(root|alias)[[:space:]]+$APP_DIR(/|;|[[:space:]])" /etc/nginx/sites-enabled 2>/dev/null | xargs -r -n1 readlink -f | sort -u)
 [ "${#SITES[@]}" -gt 0 ] || die "no nginx config references $APP_DIR (looked in sites-enabled and conf.d)"
 for f in "${SITES[@]}"; do ok "site config: $f"; done
 grep -qsE '^\s*include\s+/etc/nginx/conf\.d/\*\.conf' /etc/nginx/nginx.conf || die "/etc/nginx/nginx.conf does not include conf.d/*.conf"
@@ -42,7 +42,8 @@ ok "backup in $BACKUP"
 
 restore() {
   printf '\033[1;31m   restoring nginx config from %s\033[0m\n' "$BACKUP" >&2
-  for f in "${SITES[@]}"; do [ -f "$BACKUP$f" ] && cp -a "$BACKUP$f" "$f"; done
+  local site
+  for site in "${SITES[@]}"; do [ -f "$BACKUP$site" ] && cp -a "$BACKUP$site" "$site"; done
   if [ -f "$BACKUP$CONF" ]; then cp -a "$BACKUP$CONF" "$CONF"; else rm -f "$CONF"; fi
   nginx -t >/dev/null 2>&1 && nginx -s reload || true
 }
@@ -90,7 +91,11 @@ for f in "${SITES[@]}"; do
     }
     END { if (n) flush() }
   ' "$f" > "$f.mrbedmed.tmp"
-  if cmp -s "$f" "$f.mrbedmed.tmp"; then rm -f "$f.mrbedmed.tmp"; die "could not find a server block with server_name in $f"; fi
+  if cmp -s "$f" "$f.mrbedmed.tmp"; then
+    rm -f "$f.mrbedmed.tmp"
+    printf '\033[1;33m   skipped: no server block serving the app in %s\033[0m\n' "$f"
+    continue
+  fi
   cat "$f.mrbedmed.tmp" > "$f" && rm -f "$f.mrbedmed.tmp"
   ok "rule added to $f"
 done

@@ -34,7 +34,7 @@ grep -q "$PLACEHOLDER" "$APP_DIR/dist/index.html" \
 ok "$APP_DIR/dist/index.html"
 
 log "2/5 Locate the nginx site configs serving $APP_DIR"
-mapfile -t SITES < <(grep -lRs -- "$APP_DIR" /etc/nginx/sites-enabled 2>/dev/null | xargs -r -n1 readlink -f | sort -u)
+mapfile -t SITES < <(grep -lRsE "^[[:space:]]*(root|alias)[[:space:]]+$APP_DIR(/|;|[[:space:]])" /etc/nginx/sites-enabled 2>/dev/null | xargs -r -n1 readlink -f | sort -u)
 [ "${#SITES[@]}" -gt 0 ] || die "no nginx config references $APP_DIR"
 for f in "${SITES[@]}"; do ok "$f"; done
 
@@ -44,7 +44,8 @@ ok "backup in $BACKUP"
 
 restore() {
   printf '\033[1;31m   restoring nginx config from %s\033[0m\n' "$BACKUP" >&2
-  for f in "${SITES[@]}"; do [ -f "$BACKUP$f" ] && cp -a "$BACKUP$f" "$f"; done
+  local site
+  for site in "${SITES[@]}"; do [ -f "$BACKUP$site" ] && cp -a "$BACKUP$site" "$site"; done
   if [ -f "$BACKUP$CONF" ]; then cp -a "$BACKUP$CONF" "$CONF"; else rm -f "$CONF"; fi
   nginx -t >/dev/null 2>&1 && nginx -s reload || true
 }
@@ -64,6 +65,7 @@ ok "$CONF"
 log "4/5 Add sub_filter to the server blocks that serve the app"
 RULE1="    sub_filter '$PLACEHOLDER' \$mrbedmed_canonical_tag;"
 RULE2='    sub_filter_once on;'
+CHANGED=0
 for f in "${SITES[@]}"; do
   if grep -q "$MARKER" "$f"; then ok "already present in $f"; continue; fi
   awk -v app="$APP_DIR" -v r1="$RULE1" -v r2="$RULE2" '
@@ -90,11 +92,17 @@ for f in "${SITES[@]}"; do
     }
     END { if (n) flush() }
   ' "$f" > "$f.mrbedmed.tmp"
-  if cmp -s "$f" "$f.mrbedmed.tmp"; then rm -f "$f.mrbedmed.tmp"; restore; die "could not find a server block with server_name in $f"; fi
+  if cmp -s "$f" "$f.mrbedmed.tmp"; then
+    rm -f "$f.mrbedmed.tmp"
+    printf '\033[1;33m   skipped: no server block serving the app in %s\033[0m\n' "$f"
+    continue
+  fi
+  CHANGED=$((CHANGED + 1))
   cat "$f.mrbedmed.tmp" > "$f" && rm -f "$f.mrbedmed.tmp"
   ok "sub_filter added to $f"
 done
 
+grep -lq "$MARKER" "${SITES[@]}" || { restore; die "no server block serving $APP_DIR was found; nothing changed"; }
 if ! nginx -t; then restore; die "nginx -t failed; original config restored"; fi
 nginx -s reload
 ok "nginx reloaded"
