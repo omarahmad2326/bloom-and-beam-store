@@ -25,9 +25,7 @@ import Cart from "./pages/Cart";
 import OrderHistory from "./pages/OrderHistory";
 import Auth from "./pages/Auth";
 import AccountSettings from "./pages/AccountSettings";
-import Privacy from "./pages/Privacy";
-import Terms from "./pages/Terms";
-import Warranty from "./pages/Warranty";
+import SitePage from "./pages/SitePage";
 import NotFound from "./pages/NotFound";
 import SitemapXml from "./pages/SitemapXml";
 
@@ -46,6 +44,8 @@ const AdminHomeCards = lazy(() => import("./pages/admin/AdminHomeCards"));
 const AdminContactSettings = lazy(() => import("./pages/admin/AdminContactSettings"));
 const AdminRedirects = lazy(() => import("./pages/admin/AdminRedirects"));
 const AdminAboutPage = lazy(() => import("./pages/admin/AdminAboutPage"));
+const AdminContactPage = lazy(() => import("./pages/admin/AdminContactPage"));
+const AdminPages = lazy(() => import("./pages/admin/AdminPages"));
 
 const AdminFallback = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -105,9 +105,10 @@ const App = () => (
               <Route path="/admin/contact-settings" element={<AdminContactSettings />} />
               <Route path="/admin/redirects" element={<AdminRedirects />} />
               <Route path="/admin/about" element={<AdminAboutPage />} />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route path="/terms" element={<Terms />} />
-              <Route path="/warranty" element={<Warranty />} />
+              <Route path="/admin/contact-page" element={<AdminContactPage />} />
+              <Route path="/admin/pages" element={<AdminPages />} />
+              {/* Admin-managed content pages (Privacy, Terms, Warranty, …). Static routes above take precedence. */}
+              <Route path="/:slug" element={<SitePage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             </Suspense>

@@ -4,8 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { slugify, isValidSlug, SLUG_MAX_LENGTH } from '@/lib/slugify';
+import { isReservedPageSlug, RESERVED_SLUG_MESSAGE } from '@/lib/sitePages';
 
-export type SlugTable = 'products' | 'parts' | 'categories' | 'services' | 'blog_posts';
+export type SlugTable = 'products' | 'parts' | 'categories' | 'services' | 'blog_posts' | 'site_pages';
 
 export const SLUG_PATH_PREFIX: Record<SlugTable, string> = {
   products: '/products/',
@@ -13,6 +14,7 @@ export const SLUG_PATH_PREFIX: Record<SlugTable, string> = {
   categories: '/category/',
   services: '/services/',
   blog_posts: '/blog/',
+  site_pages: '/',
 };
 
 export const SLUG_TAKEN_MESSAGE = 'This slug is already used.';
@@ -38,6 +40,7 @@ export async function validateSlugForSave(
   if (!slug) return 'Slug is required.';
   // Legacy slugs that predate the format rules stay valid until they are changed.
   if (slug !== originalSlug && !isValidSlug(slug)) return SLUG_FORMAT_MESSAGE;
+  if (table === 'site_pages' && isReservedPageSlug(slug)) return RESERVED_SLUG_MESSAGE;
   try {
     if (!(await isSlugAvailable(table, slug, excludeId))) return SLUG_TAKEN_MESSAGE;
   } catch {
@@ -51,6 +54,7 @@ export function slugErrorFromDb(error: { code?: string; message?: string } | nul
   if (!error) return null;
   if (error.code === '23505' && /slug/i.test(error.message || '')) return SLUG_TAKEN_MESSAGE;
   if (error.code === '22023' && /slug/i.test(error.message || '')) return SLUG_FORMAT_MESSAGE;
+  if (error.code === '23514' && /slug_not_reserved/i.test(error.message || '')) return RESERVED_SLUG_MESSAGE;
   return null;
 }
 
@@ -109,7 +113,8 @@ export default function SlugField({
 
   const prefix = SLUG_PATH_PREFIX[table];
   const formatInvalid = !!value && value !== originalSlug && !isValidSlug(value);
-  const message = error || (status === 'taken' ? SLUG_TAKEN_MESSAGE : formatInvalid ? SLUG_FORMAT_MESSAGE : null);
+  const reserved = table === 'site_pages' && isReservedPageSlug(value);
+  const message = error || (reserved ? RESERVED_SLUG_MESSAGE : status === 'taken' ? SLUG_TAKEN_MESSAGE : formatInvalid ? SLUG_FORMAT_MESSAGE : null);
   const willRedirect = !!originalSlug && !!value && value !== originalSlug && isPublished;
 
   return (

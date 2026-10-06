@@ -2,10 +2,27 @@ import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Facebook, Twitter, Linkedin, Instagram, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useQuery } from '@tanstack/react-query';
 import { useContactInfo } from '@/hooks/useContactInfo';
+import { supabase } from '@/integrations/supabase/client';
 
 export function Footer() {
   const { contactInfo } = useContactInfo();
+  // Pages marked "Show in footer" in Dashboard → Pages (Privacy, Terms, Warranty, …).
+  const { data: footerPages = [] } = useQuery({
+    queryKey: ['footer-pages'],
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('site_pages')
+        .select('slug, title, footer_label')
+        .eq('published', true)
+        .eq('show_in_footer', true)
+        .order('footer_order', { ascending: true })
+        .order('title', { ascending: true });
+      return data || [];
+    },
+  });
 
   const socialIcons = [
     { Icon: Facebook, url: contactInfo.social_links.facebook },
@@ -101,7 +118,7 @@ export function Footer() {
               {[
                 { name: 'ER Stretchers', to: '/category/er-stretcher' },
                 { name: 'EMS Stretcher', to: '/category/ems-stretcher' },
-                { name: 'ICU Beds', to: '/category/ICU-bed' },
+                { name: 'ICU Beds', to: '/category/icu-beds' },
                 { name: 'Patients Recliner', to: '/category/patient-recliner' },
                 { name: 'Spare Parts', to: '/parts' },
               ].map((item) => (
@@ -160,11 +177,15 @@ export function Footer() {
           <p className="text-background/50 text-sm">
             © {new Date().getFullYear()} Mr.Bedmed. All rights reserved.
           </p>
-          <div className="flex gap-6 text-sm text-background/50">
-            <Link to="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
-            <Link to="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>
-            <Link to="/warranty" className="hover:text-primary transition-colors">Warranty Info</Link>
-          </div>
+          {footerPages.length > 0 && (
+            <nav aria-label="Legal" className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-background/50">
+              {footerPages.map((page) => (
+                <Link key={page.slug} to={`/${page.slug}`} className="hover:text-primary transition-colors">
+                  {page.footer_label || page.title}
+                </Link>
+              ))}
+            </nav>
+          )}
         </div>
       </div>
     </footer>

@@ -612,6 +612,54 @@ export type Database = {
         }
         Relationships: []
       }
+      site_pages: {
+        Row: {
+          content_html: string
+          created_at: string
+          custom_schema: string | null
+          footer_label: string | null
+          footer_order: number
+          id: string
+          meta_description: string | null
+          meta_title: string | null
+          published: boolean
+          show_in_footer: boolean
+          slug: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content_html?: string
+          created_at?: string
+          custom_schema?: string | null
+          footer_label?: string | null
+          footer_order?: number
+          id?: string
+          meta_description?: string | null
+          meta_title?: string | null
+          published?: boolean
+          show_in_footer?: boolean
+          slug: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content_html?: string
+          created_at?: string
+          custom_schema?: string | null
+          footer_label?: string | null
+          footer_order?: number
+          id?: string
+          meta_description?: string | null
+          meta_title?: string | null
+          published?: boolean
+          show_in_footer?: boolean
+          slug?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       site_settings: {
         Row: {
           created_at: string

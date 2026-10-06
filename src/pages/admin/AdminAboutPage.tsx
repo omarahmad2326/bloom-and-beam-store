@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, ExternalLink, Loader2, Plus, Save, Trash2, AlertTriangle } from 'lucide-react';
+import { ExternalLink, Loader2, Plus, Save, AlertTriangle } from 'lucide-react';
+import { moveItem as move, RowControls, Section, TitleField } from '@/components/admin/PageEditorParts';
 import { toast } from 'sonner';
 import AdminLayout from './AdminLayout';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import RichTextEditor from '@/components/admin/RichTextEditor';
 import ListEditor, { cleanList } from '@/components/admin/ListEditor';
@@ -21,32 +21,6 @@ import {
 } from '@/lib/aboutPage';
 
 const WORD_TARGET = 700;
-
-function move<T>(items: T[], i: number, dir: -1 | 1): T[] {
-  const j = i + dir;
-  if (j < 0 || j >= items.length) return items;
-  const next = [...items];
-  [next[i], next[j]] = [next[j], next[i]];
-  return next;
-}
-
-function RowControls({ index, count, onMove, onRemove, label }: {
-  index: number; count: number; onMove: (dir: -1 | 1) => void; onRemove: () => void; label: string;
-}) {
-  return (
-    <div className="flex shrink-0 gap-1">
-      <Button type="button" variant="ghost" size="icon" className="h-8 w-8" disabled={index === 0} onClick={() => onMove(-1)} aria-label={`Move ${label} up`}>
-        <ArrowUp className="h-4 w-4" />
-      </Button>
-      <Button type="button" variant="ghost" size="icon" className="h-8 w-8" disabled={index === count - 1} onClick={() => onMove(1)} aria-label={`Move ${label} down`}>
-        <ArrowDown className="h-4 w-4" />
-      </Button>
-      <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={onRemove} aria-label={`Remove ${label}`}>
-        <Trash2 className="h-4 w-4 text-destructive" />
-      </Button>
-    </div>
-  );
-}
 
 function CardsEditor({ cards, onChange, withLinks, addLabel }: {
   cards: AboutCard[]; onChange: (cards: AboutCard[]) => void; withLinks: boolean; addLabel: string;
@@ -146,27 +120,6 @@ function TeamEditor({ team, onChange }: { team: AboutTeamMember[]; onChange: (t:
       <Button type="button" variant="outline" size="sm" onClick={() => onChange([...team, { name: '', role: '', years: '', photo_url: '', photo_alt: '' }])}>
         <Plus className="mr-1 h-4 w-4" /> Add team member
       </Button>
-    </div>
-  );
-}
-
-function Section({ n, title, children, hint }: { n: number; title: string; children: React.ReactNode; hint?: string }) {
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg">{n}. {title}</CardTitle>
-        {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
-      </CardHeader>
-      <CardContent className="space-y-4">{children}</CardContent>
-    </Card>
-  );
-}
-
-function TitleField({ id, value, onChange }: { id: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>Section title (H2)</Label>
-      <Input id={id} value={value} onChange={(e) => onChange(e.target.value)} />
     </div>
   );
 }

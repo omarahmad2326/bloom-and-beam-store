@@ -23,12 +23,13 @@ Deno.serve(async (req) => {
     // Always the canonical domain, so preview/staging origins never leak into the sitemap.
     const baseUrl = (Deno.env.get('SITE_URL') || 'https://mrbedmed.com').replace(/\/+$/, '')
 
-    const [posts, products, parts, services, categories] = await Promise.all([
+    const [posts, products, parts, services, categories, pages] = await Promise.all([
       supabase.from('blog_posts').select('slug, id, updated_at').eq('published', true),
       supabase.from('products').select('id, slug, updated_at'),
       supabase.from('parts').select('id, slug, updated_at'),
       supabase.from('services').select('slug, updated_at').eq('published', true),
       supabase.from('categories').select('slug, updated_at'),
+      supabase.from('site_pages').select('slug, updated_at').eq('published', true),
     ])
 
     const staticPages = [
@@ -40,9 +41,6 @@ Deno.serve(async (req) => {
       { loc: '/contact-us', priority: '0.6', changefreq: 'monthly' },
       { loc: '/faq', priority: '0.7', changefreq: 'weekly' },
       { loc: '/blog', priority: '0.8', changefreq: 'daily' },
-      { loc: '/warranty', priority: '0.4', changefreq: 'yearly' },
-      { loc: '/privacy', priority: '0.3', changefreq: 'yearly' },
-      { loc: '/terms', priority: '0.3', changefreq: 'yearly' },
     ]
 
     const entries: string[] = []
@@ -56,6 +54,7 @@ Deno.serve(async (req) => {
     }
 
     for (const page of staticPages) add(page.loc, page.changefreq, page.priority)
+    for (const p of pages.data ?? []) add(`/${p.slug}`, 'yearly', '0.4', p.updated_at)
     for (const c of categories.data ?? []) add(`/category/${c.slug}`, 'weekly', '0.8', c.updated_at)
     for (const s of services.data ?? []) add(`/services/${s.slug}`, 'monthly', '0.7', s.updated_at)
     for (const p of products.data ?? []) add(`/products/${p.slug || p.id}`, 'weekly', '0.8', p.updated_at)
