@@ -31,7 +31,7 @@ NODE="$(command -v node)" || die "node not found"
 [ -f "$APP_DIR/.env" ] || die "$APP_DIR/.env missing"
 
 log "1/5 Locate the nginx site serving $APP_DIR"
-mapfile -t SITES < <(grep -lrs -- "$APP_DIR" /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null | grep -v "$CONF" | xargs -r -n1 readlink -f | sort -u)
+mapfile -t SITES < <(grep -lRs -- "$APP_DIR" /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null | grep -v "$CONF" | xargs -r -n1 readlink -f | sort -u)
 [ "${#SITES[@]}" -gt 0 ] || die "no nginx config references $APP_DIR (looked in sites-enabled and conf.d)"
 for f in "${SITES[@]}"; do ok "site config: $f"; done
 grep -qsE '^\s*include\s+/etc/nginx/conf\.d/\*\.conf' /etc/nginx/nginx.conf || die "/etc/nginx/nginx.conf does not include conf.d/*.conf"
