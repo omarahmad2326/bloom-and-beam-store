@@ -3,10 +3,12 @@ import { useEditor, useEditorState, EditorContent, type Editor } from '@tiptap/r
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
+import { TableKit } from '@tiptap/extension-table';
 import { useQuery } from '@tanstack/react-query';
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough, Heading2, Heading3, Heading4, Pilcrow,
   List, ListOrdered, Quote, Minus, Link2, Unlink, ImagePlus, RemoveFormatting, Undo2, Redo2, Code2, Search, Upload, Loader2,
+  Table2, BetweenHorizontalEnd, BetweenVerticalEnd, Rows3, Columns3, PanelTop, Grid2x2X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -56,6 +58,8 @@ export default function RichTextEditor({
       }),
       Image.configure({ inline: false }),
       Placeholder.configure({ placeholder }),
+      // Tables typed or pasted from Word / Excel / Google Docs / web pages stay tables.
+      TableKit.configure({ table: { resizable: false } }),
     ],
     content: contentToHtml(value),
     onUpdate: ({ editor }) => {
@@ -150,6 +154,8 @@ function Toolbar({ editor, sourceMode, onToggleSource, onLink, onImage }: Toolba
       quote: e.isActive('blockquote'),
       link: e.isActive('link'),
       image: e.isActive('image'),
+      table: e.isActive('table'),
+      headerRow: e.isActive('tableHeader'),
       canUndo: e.can().undo(),
       canRedo: e.can().redo(),
     }),
@@ -187,6 +193,19 @@ function Toolbar({ editor, sourceMode, onToggleSource, onLink, onImage }: Toolba
         <Tool title="Remove link" disabled={disabled || !s.link} onClick={() => chain().extendMarkRange('link').unsetLink().run()} icon={Unlink} />
         <Tool title={s.image ? 'Edit image / ALT text' : 'Insert image'} active={s.image} disabled={disabled} onClick={onImage} icon={ImagePlus} />
         <Tool title="Clear formatting" disabled={disabled} onClick={() => chain().unsetAllMarks().clearNodes().run()} icon={RemoveFormatting} />
+      </Group>
+      <Group>
+        <Tool title="Insert table" active={s.table} disabled={disabled || s.table} onClick={() => chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} icon={Table2} />
+        {s.table && (
+          <>
+            <Tool title="Add row below" disabled={disabled} onClick={() => chain().addRowAfter().run()} icon={BetweenHorizontalEnd} />
+            <Tool title="Add column right" disabled={disabled} onClick={() => chain().addColumnAfter().run()} icon={BetweenVerticalEnd} />
+            <Tool title="Delete row" disabled={disabled} onClick={() => chain().deleteRow().run()} icon={Rows3} />
+            <Tool title="Delete column" disabled={disabled} onClick={() => chain().deleteColumn().run()} icon={Columns3} />
+            <Tool title="Toggle header row" active={s.headerRow} disabled={disabled} onClick={() => chain().toggleHeaderRow().run()} icon={PanelTop} />
+            <Tool title="Delete table" disabled={disabled} onClick={() => chain().deleteTable().run()} icon={Grid2x2X} />
+          </>
+        )}
       </Group>
       <div className="ml-auto">
         <Tool title={sourceMode ? 'Back to visual editor' : 'Edit HTML source'} active={sourceMode} onClick={onToggleSource} icon={Code2} />

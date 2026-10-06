@@ -378,8 +378,17 @@
   .rich-content blockquote { @apply border-l-4 border-primary pl-4 py-2 my-4 italic bg-muted/30 rounded-r; }
   .rich-content img { @apply max-w-full h-auto rounded-lg my-4; }
   .rich-content hr { @apply my-8 border-border; }
-  .rich-content table { @apply w-full border-collapse my-4 text-sm; }
-  .rich-content th, .rich-content td { @apply border border-border px-3 py-2 text-left; }
+  /* Tables scroll sideways on small screens instead of breaking the layout. */
+  .rich-content table { @apply block w-max min-w-full max-w-full overflow-x-auto border-collapse my-4 text-sm; }
+  .rich-content th, .rich-content td { @apply border border-border px-3 py-2 text-left align-top; }
+  .rich-content th { @apply bg-muted font-semibold text-foreground; }
+  .rich-content td > p, .rich-content th > p { @apply mb-0; }
+  .rich-content td > p + p, .rich-content th > p + p { @apply mt-2; }
+
+  .rich-editor .tableWrapper { @apply overflow-x-auto my-4; }
+  .rich-editor .tableWrapper table { @apply table w-full max-w-none overflow-visible my-0; }
+  .rich-editor td, .rich-editor th { @apply relative min-w-[4rem]; }
+  .rich-editor .selectedCell::after { content: ''; @apply absolute inset-0 bg-primary/15 pointer-events-none; }
 
   .rich-editor .ProseMirror { @apply min-h-[inherit] outline-none px-4 py-3; }
   .rich-editor .ProseMirror img.ProseMirror-selectednode { @apply ring-2 ring-primary; }

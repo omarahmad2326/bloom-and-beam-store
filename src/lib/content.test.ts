@@ -32,6 +32,14 @@ describe('content', () => {
     expect(html).toMatch(/<a href="\/blog\/y">y<\/a>/);
   });
 
+  it('keeps tables (incl. merged cells) when rendering on the site', () => {
+    const html = renderableHtml('<table><tbody><tr><th colspan="2"><p>Specs</p></th></tr><tr><td><p>Capacity</p></td><td><p>700 lb</p></td></tr></tbody></table>');
+    expect(html).toContain('<table>');
+    expect(html).toContain('<th colspan="2">');
+    expect(html).toContain('<td><p>700 lb</p></td>');
+    expect(toPlainText(html)).toBe('Specs Capacity 700 lb');
+  });
+
   it('extracts plain text with word-boundary truncation', () => {
     expect(toPlainText('<h2>Title</h2><p>Hello <strong>world</strong></p>')).toBe('Title Hello world');
     expect(toPlainText('<p>one two three four five</p>', 12)).toBe('one two…');
