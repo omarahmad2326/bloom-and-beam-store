@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
 # Release script for the DigitalOcean droplet (run from the repo root on the server).
 #
-#   SUPABASE_ACCESS_TOKEN=sbp_xxx \
+#   SUPABASE_DB_URL='postgresql://postgres.<ref>:[YOUR-PASSWORD]@<pooler-host>:5432/postgres' \
 #   SUPABASE_DB_PASSWORD='your-db-password' \
+#   SUPABASE_ACCESS_TOKEN=sbp_xxx \       # optional: deploys the sitemap edge function
 #   CLOUDFLARE_API_TOKEN=xxx \            # optional: deploys the edge redirect worker
 #   bash scripts/deploy-server.sh
+#
+# SUPABASE_DB_URL is the "Session pooler" string from Supabase → Connect (IPv4-friendly);
+# a literal [YOUR-PASSWORD] in it is replaced with the URL-encoded SUPABASE_DB_PASSWORD.
+# If SUPABASE_DB_URL is not set, the CLI link flow is used (needs SUPABASE_ACCESS_TOKEN).
 #
 # Order matters: database migration first, then the frontend build (the new
 # frontend reads columns the migration creates). nginx serves ./dist directly.
@@ -25,28 +30,47 @@ NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
 ok "node $(node -v)"
 [ -f supabase/migrations/20261006120000_cms_seo_upgrade.sql ] || die "new code not present; run: git pull origin main"
 ok "release code present ($(git rev-parse --short HEAD 2>/dev/null || echo 'no git'))"
-[ -f .env ] || die ".env missing; it needs VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY"
+if [ ! -f .env ] && [ -n "${PUBLISHABLE_KEY:-}" ]; then
+  printf 'VITE_SUPABASE_URL=https://%s.supabase.co\nVITE_SUPABASE_PUBLISHABLE_KEY=%s\nVITE_SITE_URL=%s\n' \
+    "$PROJECT_REF" "$PUBLISHABLE_KEY" "$SITE" > .env
+  ok "created .env from PUBLISHABLE_KEY"
+fi
+[ -f .env ] || die ".env missing; re-run with PUBLISHABLE_KEY=... to create it"
 set -a; . ./.env; set +a
 [ -n "${VITE_SUPABASE_URL:-}" ] && [ -n "${VITE_SUPABASE_PUBLISHABLE_KEY:-}" ] || die ".env lacks VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY"
 case "$VITE_SUPABASE_URL" in *"$PROJECT_REF"*) ok ".env points at $PROJECT_REF" ;; *) die ".env points at a different Supabase project: $VITE_SUPABASE_URL" ;; esac
-: "${SUPABASE_ACCESS_TOKEN:?set SUPABASE_ACCESS_TOKEN (supabase.com/dashboard/account/tokens)}"
 : "${SUPABASE_DB_PASSWORD:?set SUPABASE_DB_PASSWORD (Supabase → Project Settings → Database)}"
-export SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD
+export SUPABASE_DB_PASSWORD
+[ -n "${SUPABASE_ACCESS_TOKEN:-}" ] && export SUPABASE_ACCESS_TOKEN
 SB="npx --yes supabase@latest"
 
+if [ -n "${SUPABASE_DB_URL:-}" ]; then
+  ENCODED_PW="$(node -e 'process.stdout.write(encodeURIComponent(process.argv[1]))' "$SUPABASE_DB_PASSWORD")"
+  DB_URL="${SUPABASE_DB_URL//\[YOUR-PASSWORD\]/$ENCODED_PW}"
+  case "$DB_URL" in *"$PROJECT_REF"*) ok "DB URL is for $PROJECT_REF" ;; *) die "SUPABASE_DB_URL is not for project $PROJECT_REF" ;; esac
+  PUSH=(db push --db-url "$DB_URL")
+else
+  [ -n "${SUPABASE_ACCESS_TOKEN:-}" ] || die "set SUPABASE_DB_URL (Supabase → Connect → Session pooler) or SUPABASE_ACCESS_TOKEN"
+  $SB link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+  PUSH=(db push --password "$SUPABASE_DB_PASSWORD")
+fi
+
 log "2/6 Database migration"
-$SB link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
-$SB db push --dry-run --password "$SUPABASE_DB_PASSWORD"
+$SB "${PUSH[@]}" --dry-run
 if [ "${YES:-}" != "1" ]; then
   read -r -p "   The list above should show ONLY 20261006120000_cms_seo_upgrade.sql. Apply? [y/N] " answer
   [ "$answer" = "y" ] || die "stopped before migration (nothing changed)"
 fi
-$SB db push --password "$SUPABASE_DB_PASSWORD"
+$SB "${PUSH[@]}"
 ok "migration applied"
 
 log "3/6 Sitemap edge function"
-$SB functions deploy sitemap --project-ref "$PROJECT_REF" --use-api
-ok "sitemap deployed"
+if [ -n "${SUPABASE_ACCESS_TOKEN:-}" ]; then
+  $SB functions deploy sitemap --project-ref "$PROJECT_REF" --use-api
+  ok "sitemap deployed"
+else
+  printf '   skipped (no SUPABASE_ACCESS_TOKEN). The current sitemap keeps working; deploy later with a token.\n'
+fi
 
 log "4/6 Edge redirect worker (Cloudflare)"
 if [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
