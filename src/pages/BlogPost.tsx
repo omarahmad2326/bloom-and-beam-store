@@ -17,6 +17,7 @@ import { absoluteUrl } from '@/lib/site';
 import { toPlainText } from '@/lib/content';
 import type { Tables } from '@/integrations/supabase/types';
 import { resolveAlt } from '@/lib/imageAlt';
+import { isValidSlug } from '@/lib/slugify';
 
 type BlogPost = Tables<'blog_posts'>;
 
@@ -89,8 +90,12 @@ const BlogPostPage = () => {
     return <RedirectOrFallback fallback={<Navigate to="/blog" replace />} />;
   }
 
+  // Opened by ID? Switch to the slug URL (the canonical one).
+  if (post.slug && isValidSlug(post.slug) && id !== post.slug) return <Navigate to={`/blog/${post.slug}`} replace />;
+
   const path = `/blog/${post.slug || post.id}`;
-  const canonicalUrl = post.canonical_url || absoluteUrl(path)!;
+  // Always the post's own slug URL, matching the canonical nginx puts in the page source.
+  const canonicalUrl = absoluteUrl(path)!;
   const summary = post.excerpt || toPlainText(post.content, 160);
   const publishedAt = post.published_at || post.created_at;
 

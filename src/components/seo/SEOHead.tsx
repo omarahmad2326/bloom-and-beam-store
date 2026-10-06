@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { canonicalFor, setCanonicalLink } from '@/lib/site';
 
 interface SEOHeadProps {
   title?: string;
@@ -62,18 +63,9 @@ export function SEOHead({
       if (article.modifiedTime) updateMeta('article:modified_time', article.modifiedTime, true);
     }
 
-    // Canonical URL
-    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement;
-    if (canonicalUrl) {
-      if (!canonical) {
-        canonical = document.createElement('link');
-        canonical.rel = 'canonical';
-        document.head.appendChild(canonical);
-      }
-      canonical.href = canonicalUrl;
-    } else if (canonical) {
-      canonical.remove();
-    }
+    // Canonical URL: the page's own (slug) URL. Never removed: nginx puts it in the page
+    // source, and every page must keep exactly one.
+    setCanonicalLink(canonicalUrl || canonicalFor(window.location.pathname));
 
     return () => {
       // Cleanup is optional since we're updating in place

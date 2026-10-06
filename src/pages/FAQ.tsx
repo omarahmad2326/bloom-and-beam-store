@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { SEOHead } from '@/components/seo/SEOHead';
 import { FAQSchema } from '@/components/seo/FAQSchema';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { absoluteUrl } from '@/lib/site';
 
 interface FAQ {
   id: string;
@@ -51,7 +52,7 @@ const FAQ = () => {
       <SEOHead
         title="FAQ - Frequently Asked Questions | Mr.Bedmed"
         description="Find answers to common questions about Mr.Bedmed medical equipment, warranty, shipping, installation, and more."
-        canonicalUrl={`${window.location.origin}/faq`}
+        canonicalUrl={absoluteUrl('/faq')}
       />
       <FAQSchema faqs={faqs.map(f => ({ question: f.question, answer: f.answer }))} />
 

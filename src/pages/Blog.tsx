@@ -8,6 +8,7 @@ import { SEOHead } from '@/components/seo/SEOHead';
 import { toPlainText } from '@/lib/content';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 import { resolveAlt } from '@/lib/imageAlt';
+import { absoluteUrl } from '@/lib/site';
 
 interface BlogPost {
   id: string;
@@ -63,7 +64,7 @@ const Blog = () => {
       <SEOHead
         title="Mr.Bedmed Blog - Medical Equipment Insights"
         description="Expert insights, maintenance tips, and industry news for healthcare professionals"
-        canonicalUrl={`${window.location.origin}/blog`}
+        canonicalUrl={absoluteUrl('/blog')}
       />
 
       {/* Hero Section */}

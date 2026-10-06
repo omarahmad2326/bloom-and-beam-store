@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { toPlainText } from '@/lib/content';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 import { resolveAlt } from '@/lib/imageAlt';
+import { absoluteUrl } from '@/lib/site';
 
 interface Part {
   id: string;
@@ -168,7 +169,7 @@ const Parts = () => {
       <SEOHead
         title="Spare Parts - OEM Replacement Parts | Mr.Bedmed"
         description="OEM replacement parts for all Mr.Bedmed medical equipment. Search by manufacturer, model, or part number."
-        canonicalUrl={`${window.location.origin}/parts`}
+        canonicalUrl={absoluteUrl('/parts')}
       />
 
       {/* Hero Section */}

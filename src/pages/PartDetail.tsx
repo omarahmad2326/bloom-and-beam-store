@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, Navigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import { toPlainText } from '@/lib/content';
 import { cn } from '@/lib/utils';
 import type { Tables } from '@/integrations/supabase/types';
 import { resolveAlt } from '@/lib/imageAlt';
+import { isValidSlug } from '@/lib/slugify';
 
 type Part = Tables<'parts'>;
 
@@ -134,6 +135,9 @@ const PartDetail = () => {
       />
     );
   }
+
+  // Opened by ID? Switch to the slug URL (the canonical one).
+  if (part.slug && isValidSlug(part.slug) && id !== part.slug) return <Navigate to={`/part/${part.slug}`} replace />;
 
   const path = `/part/${part.slug || part.id}`;
   const summary = part.short_description || toPlainText(part.description, 160);

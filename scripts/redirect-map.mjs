@@ -15,9 +15,22 @@ const q = (s) => `"${s}"`;
 const reEscape = (s) => s.replace(/[.*+?()[\]|^]/g, '\\$&');
 const trimSlash = (p) => (p.length > 1 ? p.replace(/\/+$/, '') : p);
 
+/**
+ * ID URLs (/products/{uuid}, /part/{uuid}, /blog/{uuid}) → slug URLs, so only slug URLs are ever
+ * served (and therefore canonical). Items: { prefix, id, slug }.
+ */
+export function idAliases(items) {
+  return items
+    .filter((i) => i.id && i.slug && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(i.slug) && i.slug !== i.id)
+    .map((i) => ({ from_path: `${i.prefix}${i.id}`, to_path: `${i.prefix}${i.slug}`, alias: true }));
+}
+
 export function buildMap(redirects, categories, warn = () => {}) {
   const exact = new Map(); // lowercased key -> [key, target]
   const regex = [];
+
+  // Explicit redirects first so they win over ID aliases for the same URL.
+  redirects = [...redirects].sort((a, b) => Number(!!a.alias) - Number(!!b.alias));
 
   for (const r of redirects) {
     if (!SAFE_PATH.test(r.from_path) || !SAFE_TARGET.test(r.to_path)) {
@@ -33,7 +46,7 @@ export function buildMap(redirects, categories, warn = () => {}) {
 
     for (const key of [from, `${from}/`]) {
       if (exact.has(key.toLowerCase())) {
-        warn(`skipping duplicate redirect key ${key}`);
+        if (!r.alias) warn(`skipping duplicate redirect key ${key}`);
         continue;
       }
       exact.set(key.toLowerCase(), [key, r.to_path]);

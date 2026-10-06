@@ -67,6 +67,18 @@ sudo bash scripts/setup-www-redirect.sh
 
 It removes `www.mrbedmed.com` from the existing bedmed `server_name` lines, adds a redirect-only `server` block for www (ports 80 and 443), backs up to `/root/nginx-backup-www-*`, and restores everything if `nginx -t` fails. It finishes by checking the URLs from the brief through Cloudflare.
 
+### Canonical tag in the page source (one-time)
+
+Every page's HTML source carries `<link rel="canonical" href="https://mrbedmed.com/{path}" />`. The tag uses https and the non-www domain, with no query string or trailing slash. `index.html` holds a placeholder (`<!--mrbedmed:canonical-->`) that nginx `sub_filter` replaces on each request. Only plain URL characters are accepted, so a crafted URL never produces a tag. ID URLs (`/products/{id}`, `/part/{id}`, `/blog/{id}`) 301 to their slug URLs via the redirect sync, so the canonical is always the slug version. In the browser, `CanonicalSync` and `SEOHead` keep the same single tag up to date during navigation.
+
+One-time setup on the server, run after deploying a build that contains the placeholder:
+
+```sh
+sudo bash scripts/setup-nginx-canonical.sh
+```
+
+It backs up to `/root/nginx-backup-canonical-*`, restores if `nginx -t` fails, and prints the canonical tag from the live page source for Home, a product, a service and a blog post.
+
 ## 4. Frontend
 
 ```sh

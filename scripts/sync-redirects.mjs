@@ -15,7 +15,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
-import { buildMap } from './redirect-map.mjs';
+import { buildMap, idAliases } from './redirect-map.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MAP_FILE = process.env.REDIRECTS_MAP_FILE || '/etc/nginx/mrbedmed-redirects.map';
@@ -46,11 +46,19 @@ async function rest(pathAndQuery) {
 }
 
 try {
-  const [redirects, categories] = await Promise.all([
+  const [redirects, categories, products, parts, posts] = await Promise.all([
     rest('redirects?select=from_path,to_path&order=from_path'),
     rest('categories?select=slug'),
+    rest('products?select=id,slug'),
+    rest('parts?select=id,slug'),
+    rest('blog_posts?select=id,slug&published=eq.true'),
   ]);
-  const next = buildMap(redirects, categories, (m) => console.warn(m));
+  const aliases = idAliases([
+    ...products.map((r) => ({ ...r, prefix: '/products/' })),
+    ...parts.map((r) => ({ ...r, prefix: '/part/' })),
+    ...posts.map((r) => ({ ...r, prefix: '/blog/' })),
+  ]);
+  const next = buildMap([...redirects, ...aliases], categories, (m) => console.warn(m));
   const current = fs.existsSync(MAP_FILE) ? fs.readFileSync(MAP_FILE, 'utf8') : null;
   if (current === next) process.exit(0);
 
@@ -67,7 +75,7 @@ try {
     }
     execFileSync('nginx', ['-s', 'reload'], { stdio: 'pipe' });
   }
-  console.log(`${new Date().toISOString()} map updated: ${redirects.length} redirects, ${categories.length} categories`);
+  console.log(`${new Date().toISOString()} map updated: ${redirects.length} redirects, ${aliases.length} ID→slug aliases, ${categories.length} categories`);
 } catch (err) {
   console.error(`${new Date().toISOString()} sync failed: ${err.message}`);
   process.exit(1);

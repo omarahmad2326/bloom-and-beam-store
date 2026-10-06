@@ -1,4 +1,4 @@
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, Navigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +19,7 @@ import { absoluteUrl } from '@/lib/site';
 import { toPlainText } from '@/lib/content';
 import type { Tables } from '@/integrations/supabase/types';
 import { resolveAlt } from '@/lib/imageAlt';
+import { isValidSlug } from '@/lib/slugify';
 
 type Product = Tables<'products'>;
 
@@ -174,6 +175,9 @@ const ProductDetail = () => {
       />
     );
   }
+
+  // Opened by ID? Switch to the slug URL (the canonical one).
+  if (product.slug && isValidSlug(product.slug) && id !== product.slug) return <Navigate to={`/products/${product.slug}`} replace />;
 
   const path = `/products/${product.slug || product.id}`;
   const summary = product.short_description || toPlainText(product.description, 160);

@@ -26,6 +26,7 @@ import OrderHistory from "./pages/OrderHistory";
 import Auth from "./pages/Auth";
 import AccountSettings from "./pages/AccountSettings";
 import SitePage from "./pages/SitePage";
+import { CanonicalSync } from "./components/seo/CanonicalSync";
 import NotFound from "./pages/NotFound";
 import SitemapXml from "./pages/SitemapXml";
 
@@ -70,6 +71,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <CanonicalSync />
             <Suspense fallback={<AdminFallback />}>
             <Routes>
               <Route path="/" element={<Index />} />

@@ -9,6 +9,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { SEOHead } from '@/components/seo/SEOHead';
 import { toPlainText } from '@/lib/content';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { absoluteUrl } from '@/lib/site';
 
 interface Product {
   id: string;
@@ -126,7 +127,7 @@ const Products = () => {
         description={isHospitalBedsFilter
           ? "Browse our complete range of hospital beds including electric, ICU, bariatric, and home care beds."
           : "Explore our complete range of premium medical stretchers and hospital equipment. Emergency, ICU, transport, and recovery stretchers."}
-        canonicalUrl={`${window.location.origin}/products${isHospitalBedsFilter ? '?type=hospital-beds' : ''}`}
+        canonicalUrl={absoluteUrl('/products')}
       />
 
       <section className="py-16 md:py-24">
