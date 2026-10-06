@@ -115,8 +115,12 @@ canon() { curl -s --max-time 15 "$1" | grep -o '<link rel="canonical"[^>]*>' | h
 for path in "/" "/products" "/services/equipment-rental" "/about-us" "/products?utm_source=test" "/contact-us/"; do
   printf '   %-30s %s\n' "$path" "$(canon "https://mrbedmed.com$path" || true)"
 done
-POST="$(curl -s --max-time 15 "${VITE_SUPABASE_URL:-$(grep -E '^VITE_SUPABASE_URL=' "$APP_DIR/.env" | cut -d= -f2-)}/rest/v1/blog_posts?select=slug&published=eq.true&limit=1" \
-  -H "apikey: $(grep -E '^VITE_SUPABASE_PUBLISHABLE_KEY=' "$APP_DIR/.env" | cut -d= -f2- | tr -d '"')" | grep -o '"slug":"[^"]*"' | head -1 | cut -d'"' -f4 || true)"
+# One published blog post (values from .env; surrounding quotes and CR removed).
+envval() { grep -E "^$1=" "$APP_DIR/.env" | head -1 | cut -d= -f2- | tr -d "\"'\r"; }
+SB_URL="$(envval VITE_SUPABASE_URL)"
+SB_KEY="$(envval VITE_SUPABASE_PUBLISHABLE_KEY)"
+POST="$(curl -s --max-time 15 "$SB_URL/rest/v1/blog_posts?select=slug&published=eq.true&limit=1" -H "apikey: $SB_KEY" \
+  | grep -o '"slug":"[^"]*"' | head -1 | cut -d'"' -f4 || true)"
 [ -n "$POST" ] && printf '   %-30s %s\n' "/blog/$POST" "$(canon "https://mrbedmed.com/blog/$POST" || true)"
 
 printf '\n\033[1;32mDone.\033[0m Undo: restore files from %s, rm %s, nginx -s reload\n' "$BACKUP" "$CONF"

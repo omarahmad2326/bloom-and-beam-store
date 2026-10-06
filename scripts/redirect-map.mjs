@@ -39,6 +39,10 @@ export function buildMap(redirects, categories, warn = () => {}) {
     }
     const from = trimSlash(r.from_path);
     if (from === '/') continue;
+    if (from.length > 200) {
+      warn(`skipping redirect with a very long URL (${from.length} chars): ${from.slice(0, 60)}…`);
+      continue;
+    }
     // A redirect that only changes letter case (e.g. /category/Chair-stretcher → /category/chair-stretcher)
     // would also match the target itself, because exact keys are case-insensitive. Category casing
     // is handled by the regex below instead.
