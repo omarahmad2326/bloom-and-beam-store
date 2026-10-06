@@ -15,6 +15,8 @@ set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 CONF=/etc/nginx/conf.d/mrbedmed-redirects.conf
+# Must load before every `map` block in nginx (the first map fixes the hash size), hence "00-".
+HASH_CONF=/etc/nginx/conf.d/00-mrbedmed-map-hash.conf
 MAP=/etc/nginx/mrbedmed-redirects.map
 CRON=/etc/cron.d/mrbedmed-redirects
 LOG=/var/log/mrbedmed-redirects.log
@@ -37,7 +39,7 @@ for f in "${SITES[@]}"; do ok "site config: $f"; done
 grep -qsE '^\s*include\s+/etc/nginx/conf\.d/\*\.conf' /etc/nginx/nginx.conf || die "/etc/nginx/nginx.conf does not include conf.d/*.conf"
 
 mkdir -p "$BACKUP"
-for f in "${SITES[@]}" "$CONF" "$MAP"; do [ -f "$f" ] && cp -a --parents "$f" "$BACKUP"; done
+for f in "${SITES[@]}" "$CONF" "$MAP" "$HASH_CONF"; do [ -f "$f" ] && cp -a --parents "$f" "$BACKUP"; done
 ok "backup in $BACKUP"
 
 restore() {
@@ -46,6 +48,7 @@ restore() {
   for site in "${SITES[@]}"; do [ -f "$BACKUP$site" ] && cp -a "$BACKUP$site" "$site"; done
   if [ -f "$BACKUP$CONF" ]; then cp -a "$BACKUP$CONF" "$CONF"; else rm -f "$CONF"; fi
   [ -f "$BACKUP$MAP" ] && cp -a "$BACKUP$MAP" "$MAP"
+  if [ -f "$BACKUP$HASH_CONF" ]; then cp -a "$BACKUP$HASH_CONF" "$HASH_CONF"; else rm -f "$HASH_CONF"; fi
   nginx -t >/dev/null 2>&1 && nginx -s reload || true
 }
 
@@ -55,21 +58,28 @@ REDIRECTS_MAP_FILE="$MAP" NO_RELOAD=1 "$NODE" "$APP_DIR/scripts/sync-redirects.m
 ok "$(grep -c '^"' "$MAP") map entries"
 
 log "3/5 Install map + server-block rule"
-# Long keys (ID and blog URLs) exceed nginx's default 64-byte map bucket. These are http-level
-# directives that may appear only once, so set them here only if no other config does.
+# Long keys (ID and blog URLs) exceed nginx's default map hash bucket. map_hash_bucket_size /
+# map_hash_max_size are http-level, may be set only once, and must come before the first `map`
+# block anywhere in the config (other sites' conf.d files have maps). So they live in their own
+# file that loads first, and only if no other config already sets them.
 HASH_LINES=""
 for directive in "map_hash_bucket_size 256" "map_hash_max_size 8192"; do
   name="${directive%% *}"
-  if grep -RqsE "^[[:space:]]*$name[[:space:]]" /etc/nginx --exclude="$(basename "$CONF")"; then
-    printf '\033[1;33m   note: %s already set elsewhere; leaving it\033[0m\n' "$name"
+  if grep -RqsE "^[[:space:]]*$name[[:space:]]" /etc/nginx --exclude="$(basename "$HASH_CONF")" --exclude="$(basename "$CONF")"; then
+    printf '\033[1;33m   note: %s is already set in another nginx config; leaving it (raise it there if nginx -t complains)\033[0m\n' "$name"
   else
     HASH_LINES="$HASH_LINES$directive;"$'\n'
   fi
 done
+if [ -n "$HASH_LINES" ]; then
+  printf '# Managed by %s/scripts/setup-nginx-redirects.sh (loads before every map).\n%s' "$APP_DIR" "$HASH_LINES" > "$HASH_CONF"
+  ok "$HASH_CONF"
+else
+  rm -f "$HASH_CONF"
+fi
 
 cat > "$CONF" <<EOF
 # Managed by $APP_DIR/scripts/setup-nginx-redirects.sh
-$HASH_LINES
 map \$uri \$$MARKER {
     default "";
     include $MAP;

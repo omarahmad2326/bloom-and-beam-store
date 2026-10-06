@@ -55,6 +55,8 @@ It installs an nginx `map` that `scripts/sync-redirects.mjs` generates from the 
 
 After the setup, `scripts/deploy-server.sh` syncs the map on every release.
 
+The map has long keys (ID and blog URLs), so the setup also writes `conf.d/00-mrbedmed-map-hash.conf` with `map_hash_bucket_size 256; map_hash_max_size 8192;`. These directives must come before the first `map` block anywhere in nginx, and other sites on the server have maps of their own; the `00-` prefix makes the file load first. The file is skipped if another config already sets these values.
+
 Alternative, if you have Cloudflare access: `deploy/cloudflare-redirects/` contains an equivalent Cloudflare Worker (`npx wrangler deploy`).
 
 ### www → non-www (one-time)
