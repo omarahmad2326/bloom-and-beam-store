@@ -15,6 +15,7 @@ import { absoluteUrl } from '@/lib/site';
 import { toPlainText } from '@/lib/content';
 import type { Tables } from '@/integrations/supabase/types';
 import { resolveAlt } from '@/lib/imageAlt';
+import { CallButton } from '@/components/CallButton';
 
 type Service = Tables<'services'>;
 
@@ -199,12 +200,15 @@ const ServiceDetail = () => {
             <p className="text-muted-foreground mb-6">
               Contact our team today to discuss your {service.title.toLowerCase()} needs.
             </p>
-            <QuoteButton
-              to={`/contact-us?service=${encodeURIComponent(service.title)}`}
-              showArrow={false}
-            >
-              Contact Us Today
-            </QuoteButton>
+            <div className="flex flex-wrap justify-center gap-4">
+              <QuoteButton
+                to={`/contact-us?service=${encodeURIComponent(service.title)}`}
+                showArrow={false}
+              >
+                Contact Us Today
+              </QuoteButton>
+              <CallButton tone="onLight" />
+            </div>
           </div>
         </div>
       </section>

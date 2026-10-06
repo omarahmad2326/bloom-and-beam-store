@@ -1,8 +1,12 @@
 import { Phone, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { QuoteButton } from '@/components/QuoteButton';
+import { telHref, FALLBACK_PHONE } from '@/components/CallButton';
+import { useContactInfo } from '@/hooks/useContactInfo';
 
 export function CTA() {
+  const { contactInfo } = useContactInfo();
+  const phone = contactInfo.phone?.trim() || FALLBACK_PHONE;
   return (
     <section className="py-20">
       <div className="container">
@@ -53,11 +57,11 @@ export function CTA() {
                 className="relative overflow-hidden bg-primary-foreground/10 border-primary-foreground/60 text-primary-foreground hover:bg-primary-foreground hover:text-primary text-base transition-all duration-300 hover:scale-105 hover:animate-btn-bob"
                 asChild
               >
-                <a href="tel:+14697678853" className="group/btn relative">
+                <a href={telHref(phone)} className="group/btn relative">
                   <span className="btn-shine-sweep" />
                   <span className="relative z-10 inline-flex items-center">
                     <Phone className="mr-2 h-5 w-5 transition-transform duration-500 group-hover/btn:rotate-12" />
-                    +1 469 767 8853
+                    Call {phone}
                   </span>
                 </a>
               </Button>

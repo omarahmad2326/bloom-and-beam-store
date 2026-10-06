@@ -9,6 +9,8 @@ import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { telHref, FALLBACK_PHONE } from '@/components/CallButton';
+import { useContactInfo } from '@/hooks/useContactInfo';
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -57,6 +59,8 @@ const aboutBedmedLinks = [
 ];
 
 export function Header() {
+  const { contactInfo } = useContactInfo();
+  const topBarPhone = contactInfo.phone?.trim() || FALLBACK_PHONE;
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobileHospitalBedsOpen, setIsMobileHospitalBedsOpen] = useState(false);
   const [isMobileStretchersOpen, setIsMobileStretchersOpen] = useState(false);
@@ -123,10 +127,10 @@ export function Header() {
       {/* Top Bar */}
       <div className="bg-primary text-primary-foreground py-2">
         <div className="container flex justify-between items-center text-sm">
-          <div className="flex items-center gap-2">
-            <Phone className="h-4 w-4" />
-            <span>Call Us: +1 469 767 8853</span>
-          </div>
+          <a href={telHref(topBarPhone)} className="flex items-center gap-2 hover:underline underline-offset-2">
+            <Phone className="h-4 w-4" aria-hidden="true" />
+            <span>Call Us: {topBarPhone}</span>
+          </a>
           <div className="hidden md:block">
             <span>Free Shipping on Orders Over $1,000</span>
           </div>

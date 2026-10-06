@@ -20,6 +20,7 @@ import { absoluteUrl } from '@/lib/site';
 import { isContentEmpty, toPlainText } from '@/lib/content';
 import type { Tables } from '@/integrations/supabase/types';
 import { resolveAlt } from '@/lib/imageAlt';
+import { CallButton } from '@/components/CallButton';
 
 type Category = Tables<'categories'>;
 type Product = Tables<'products'>;
@@ -339,9 +340,7 @@ export default function CategoryDetail() {
               <Button asChild size="lg" variant="secondary">
                 <Link to="/contact-us">Contact Our Experts</Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary">
-                <a href={tel}>Call {phone}</a>
-              </Button>
+              <CallButton tone="onDark" />
             </div>
           </div>
         </section>
