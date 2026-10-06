@@ -28,6 +28,8 @@ export const ADMIN_SCREENS = {
   'contact-page': dynamic(() => import('@/views/admin/AdminContactPage'), { ssr: false, loading }),
   pages: dynamic(() => import('@/views/admin/AdminPages'), { ssr: false, loading }),
   footer: dynamic(() => import('@/views/admin/AdminFooter'), { ssr: false, loading }),
+  newsletter: dynamic(() => import('@/views/admin/AdminNewsletter'), { ssr: false, loading }),
+  'recently-deleted': dynamic(() => import('@/views/admin/AdminRecentlyDeleted'), { ssr: false, loading }),
 } as const;
 
 export type AdminSection = keyof typeof ADMIN_SCREENS;

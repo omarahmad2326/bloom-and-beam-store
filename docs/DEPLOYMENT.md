@@ -116,6 +116,16 @@ npm run build && npm start      # production server on :3000
 
 `.env` may use either `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` (the server's existing file) or the `NEXT_PUBLIC_` names. `next.config.mjs` maps them.
 
+### Newsletter email (one-time)
+
+The newsletter sends through Resend. The sending domain must be verified in Resend → Domains (the DNS records). Then, on the server:
+
+```sh
+cd /var/www/bedmed && bash scripts/setup-newsletter.sh
+```
+
+The script asks for the API key (the input is hidden) and lists the domains verified in Resend. It then asks for the sender address and saves `RESEND_API_KEY`, `NEWSLETTER_FROM` and `NEWSLETTER_REPLY_TO` in `.env`, which only root can read. It restarts the site and can send a test email. Re-run it to change the key or the sender.
+
 ## 5. Post-deploy checks (acceptance criteria)
 
 ### Slugs and redirects

@@ -4,10 +4,13 @@ import { AdminScreen, type AdminSection } from '../AdminScreens';
 
 export const metadata: Metadata = { title: { absolute: 'Admin | Mr.Bedmed' }, robots: { index: false, follow: false } };
 
-const SECTIONS: AdminSection[] = [
-  '', 'products', 'categories', 'parts', 'services', 'blog', 'faqs', 'orders', 'messages', 'settings',
-  'home-cards', 'contact-settings', 'redirects', 'about', 'contact-page', 'pages', 'footer',
-];
+// Record<AdminSection, …> makes TypeScript reject a screen that is missing here.
+const SECTION_KEYS: Record<AdminSection, true> = {
+  '': true, products: true, categories: true, parts: true, services: true, blog: true, faqs: true, orders: true,
+  messages: true, settings: true, 'home-cards': true, 'contact-settings': true, redirects: true, about: true,
+  'contact-page': true, pages: true, footer: true, newsletter: true, 'recently-deleted': true,
+};
+const SECTIONS = Object.keys(SECTION_KEYS) as AdminSection[];
 
 type Props = { params: Promise<{ section?: string[] }> };
 

@@ -149,7 +149,7 @@ export default function AdminPages() {
 
   const handleDelete = async (page: SitePage) => {
     if (!isAdmin) return;
-    if (!confirm(`Delete "${page.title}"? /${page.slug} will show "page not found" unless you add a redirect in Dashboard → Redirects.`)) return;
+    if (!confirm(`Delete "${page.title}"? /${page.slug} will show "page not found" unless you add a redirect in Dashboard → Redirects. You can restore it from Dashboard → Recently Deleted for 7 days.`)) return;
     const { error } = await supabase.from('site_pages').delete().eq('id', page.id);
     if (error) toast.error('Failed to delete page');
     else {

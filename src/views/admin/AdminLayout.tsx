@@ -23,7 +23,9 @@ import {
   Info,
   Files,
   Mail,
-  PanelBottom
+  PanelBottom,
+  Newspaper,
+  History,
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -103,9 +105,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { path: '/admin/faqs', icon: HelpCircle, label: 'FAQs' },
     { path: '/admin/orders', icon: ShoppingCart, label: 'Orders', badge: pendingOrdersCount },
     { path: '/admin/messages', icon: MessageSquare, label: 'Messages', badge: unreadMessagesCount },
+    { path: '/admin/newsletter', icon: Newspaper, label: 'Newsletter' },
     { path: '/admin/settings', icon: Settings, label: 'Site Settings' },
     { path: '/admin/contact-settings', icon: Phone, label: 'Contact Info' },
     { path: '/admin/redirects', icon: CornerUpRight, label: 'Redirects' },
+    { path: '/admin/recently-deleted', icon: History, label: 'Recently Deleted' },
   ];
 
   const handleSignOut = async () => {

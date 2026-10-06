@@ -237,7 +237,7 @@ export default function AdminParts() {
       return;
     }
 
-    if (!confirm('Delete this part?')) return;
+    if (!confirm('Delete this part? You can restore it from Dashboard → Recently Deleted for 7 days.')) return;
 
     const { error } = await supabase
       .from('parts')

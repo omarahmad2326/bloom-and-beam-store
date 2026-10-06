@@ -144,7 +144,7 @@ export default function AdminOrders() {
       return;
     }
 
-    if (!confirm('Are you sure you want to delete this order?')) return;
+    if (!confirm('Are you sure you want to delete this order? You can restore it from Dashboard → Recently Deleted for 7 days.')) return;
 
     const { error } = await supabase
       .from('orders')

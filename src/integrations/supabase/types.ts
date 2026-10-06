@@ -179,6 +179,42 @@ export type Database = {
         }
         Relationships: []
       }
+      deleted_items: {
+        Row: {
+          batch_id: number
+          data: Json
+          deleted_at: string
+          deleted_by: string | null
+          deleted_by_email: string | null
+          id: number
+          label: string | null
+          row_id: string
+          table_name: string
+        }
+        Insert: {
+          batch_id?: number
+          data: Json
+          deleted_at?: string
+          deleted_by?: string | null
+          deleted_by_email?: string | null
+          id?: number
+          label?: string | null
+          row_id: string
+          table_name: string
+        }
+        Update: {
+          batch_id?: number
+          data?: Json
+          deleted_at?: string
+          deleted_by?: string | null
+          deleted_by_email?: string | null
+          id?: number
+          label?: string | null
+          row_id?: string
+          table_name?: string
+        }
+        Relationships: []
+      }
       faqs: {
         Row: {
           answer: string
@@ -276,6 +312,87 @@ export type Database = {
           id?: string
           sort_order?: number | null
           title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      newsletter_campaigns: {
+        Row: {
+          content_html: string
+          created_at: string
+          created_by: string | null
+          failed_count: number
+          id: string
+          last_error: string | null
+          preheader: string | null
+          recipient_count: number
+          sent_at: string | null
+          sent_count: number
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          content_html?: string
+          created_at?: string
+          created_by?: string | null
+          failed_count?: number
+          id?: string
+          last_error?: string | null
+          preheader?: string | null
+          recipient_count?: number
+          sent_at?: string | null
+          sent_count?: number
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Update: {
+          content_html?: string
+          created_at?: string
+          created_by?: string | null
+          failed_count?: number
+          id?: string
+          last_error?: string | null
+          preheader?: string | null
+          recipient_count?: number
+          sent_at?: string | null
+          sent_count?: number
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      newsletter_subscribers: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          source: string | null
+          status: string
+          token: string
+          unsubscribed_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          source?: string | null
+          status?: string
+          token?: string
+          unsubscribed_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          source?: string | null
+          status?: string
+          token?: string
+          unsubscribed_at?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -716,6 +833,36 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      list_deleted_items: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+            batch_id: number
+            data: Json
+            deleted_at: string
+            deleted_by: string | null
+            deleted_by_email: string | null
+            id: number
+            label: string | null
+            row_id: string
+            table_name: string
+          }[]
+      }
+      newsletter_subscribe: {
+        Args: { p_email: string; p_source?: string }
+        Returns: Json
+      }
+      newsletter_unsubscribe: {
+        Args: { p_token: string }
+        Returns: boolean
+      }
+      purge_deleted_item: {
+        Args: { p_id: number }
+        Returns: undefined
+      }
+      restore_deleted_item: {
+        Args: { p_id: number }
+        Returns: Json
       }
     }
     Enums: {

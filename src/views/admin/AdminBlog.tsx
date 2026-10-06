@@ -183,7 +183,7 @@ export default function AdminBlog() {
       return;
     }
 
-    if (!confirm('Are you sure you want to delete this blog post?')) return;
+    if (!confirm('Are you sure you want to delete this blog post? You can restore it from Dashboard → Recently Deleted for 7 days.')) return;
 
     const { error } = await supabase
       .from('blog_posts')

@@ -130,7 +130,7 @@ export default function AdminFAQs() {
       return;
     }
 
-    if (!confirm('Delete this FAQ?')) return;
+    if (!confirm('Delete this FAQ? You can restore it from Dashboard → Recently Deleted for 7 days.')) return;
 
     const { error } = await supabase
       .from('faqs')

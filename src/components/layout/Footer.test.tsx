@@ -69,12 +69,18 @@ describe('Footer (Dashboard → Footer)', () => {
     expect(screen.getByText(`Copyright ${new Date().getFullYear()} Mrbedmed LLC`)).toBeTruthy();
   });
 
-  it('sends newsletter sign-ups to Messages', async () => {
+  it('sends newsletter sign-ups to the newsletter API (with the honeypot field)', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true, status: 'subscribed' }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
     renderFooter();
     fireEvent.change(screen.getByLabelText('Enter your email'), { target: { value: 'buyer@hospital.org' } });
     fireEvent.click(screen.getByRole('button', { name: 'Subscribe' }));
-    await waitFor(() => expect(inserts).toHaveLength(1));
-    expect(inserts[0]).toMatchObject({ table: 'contact_messages', row: { email: 'buyer@hospital.org', subject: 'Newsletter signup' } });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('/api/newsletter/subscribe');
+    expect(JSON.parse(String(init.body))).toEqual({ email: 'buyer@hospital.org', website: '' });
+    expect(inserts).toHaveLength(0);
+    vi.unstubAllGlobals();
   });
 
   it('hides social icons that have no link', async () => {

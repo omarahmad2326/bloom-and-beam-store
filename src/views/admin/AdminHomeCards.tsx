@@ -308,7 +308,7 @@ export default function AdminHomeCards() {
       return;
     }
 
-    if (!confirm('Delete this card and all its items?')) return;
+    if (!confirm('Delete this card and all its items? You can restore it from Dashboard → Recently Deleted for 7 days.')) return;
 
     const { error } = await supabase
       .from('home_service_cards')
@@ -329,7 +329,7 @@ export default function AdminHomeCards() {
       return;
     }
 
-    if (!confirm('Delete this item?')) return;
+    if (!confirm('Delete this item? You can restore it from Dashboard → Recently Deleted for 7 days.')) return;
 
     const { error } = await supabase
       .from('home_service_card_items')

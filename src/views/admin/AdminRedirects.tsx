@@ -84,7 +84,7 @@ export default function AdminRedirects() {
 
   const handleDelete = async (r: Redirect) => {
     if (!isAdmin) return;
-    if (!confirm(`Delete the redirect from ${r.from_path}? Visitors to the old URL will get a 404.`)) return;
+    if (!confirm(`Delete the redirect from ${r.from_path}? Visitors to the old URL will get a 404. You can restore it from Dashboard → Recently Deleted for 7 days.`)) return;
     const { error } = await supabase.from('redirects').delete().eq('id', r.id);
     if (error) toast.error('Failed to delete redirect');
     else {

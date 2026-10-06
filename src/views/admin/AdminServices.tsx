@@ -202,7 +202,7 @@ export default function AdminServices() {
       return;
     }
 
-    if (!confirm('Are you sure you want to delete this service?')) return;
+    if (!confirm('Are you sure you want to delete this service? You can restore it from Dashboard → Recently Deleted for 7 days.')) return;
 
     const { error } = await supabase
       .from('services')

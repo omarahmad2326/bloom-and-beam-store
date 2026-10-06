@@ -199,7 +199,7 @@ export default function AdminCategories() {
       return;
     }
 
-    if (!confirm('Delete this category?')) return;
+    if (!confirm('Delete this category? You can restore it from Dashboard → Recently Deleted for 7 days.')) return;
 
     const { error } = await supabase
       .from('categories')

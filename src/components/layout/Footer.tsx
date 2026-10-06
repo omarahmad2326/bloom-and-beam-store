@@ -6,7 +6,6 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useContactInfo } from '@/hooks/useContactInfo';
-import { supabase } from '@/integrations/supabase/client';
 import { isInternalUrl, renderCopyright, withFooterDefaults, type FooterLink } from '@/lib/footer';
 import { queries } from '@/queries';
 import { cn } from '@/lib/utils';
@@ -30,6 +29,7 @@ export function Footer() {
   const { contactInfo } = useContactInfo();
   const [email, setEmail] = useState('');
   const [subscribing, setSubscribing] = useState(false);
+  const [honeypot, setHoneypot] = useState('');
 
   // Footer content from Dashboard → Footer and pages marked "Show in footer" (both prefetched on the server).
   const { data: saved } = useQuery(queries.footer());
@@ -55,19 +55,19 @@ export function Footer() {
   const subscribe = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubscribing(true);
-    // Sign-ups land in Dashboard → Messages.
-    const { error } = await supabase.from('contact_messages').insert({
-      name: 'Newsletter subscriber',
-      email: email.trim(),
-      subject: 'Newsletter signup',
-      message: `Please add ${email.trim()} to the newsletter.`,
-    });
+    // Sign-ups go to Dashboard → Newsletter; new subscribers get a welcome email.
+    const res = await fetch('/api/newsletter/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim(), website: honeypot }),
+    }).catch(() => null);
+    const body = await res?.json().catch(() => null);
     setSubscribing(false);
-    if (error) {
-      toast.error('Could not subscribe right now. Please try again.');
+    if (!res?.ok || !body?.ok) {
+      toast.error(body?.error || 'Could not subscribe right now. Please try again.');
       return;
     }
-    toast.success(f.newsletter_success || 'Thanks for subscribing!');
+    toast.success(body.status === 'already_subscribed' ? 'You are already subscribed. Thank you!' : f.newsletter_success || 'Thanks for subscribing!');
     setEmail('');
   };
 
@@ -82,7 +82,18 @@ export function Footer() {
                 {f.newsletter_title && <h3 className="font-display text-2xl font-bold mb-2">{f.newsletter_title}</h3>}
                 {f.newsletter_text && <p className="text-background/70">{f.newsletter_text}</p>}
               </div>
-              <form onSubmit={subscribe} className="flex w-full md:w-auto gap-3">
+              <form onSubmit={subscribe} className="relative flex w-full md:w-auto gap-3">
+                {/* Honeypot: hidden from people, filled in by spam bots. */}
+                <input
+                  type="text"
+                  name="website"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden="true"
+                  value={honeypot}
+                  onChange={(e) => setHoneypot(e.target.value)}
+                  className="absolute -left-[9999px] h-px w-px opacity-0"
+                />
                 <Input
                   type="email"
                   required
