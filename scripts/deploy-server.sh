@@ -96,7 +96,7 @@ bash scripts/next-release.sh
 log "6/6 Smoke checks"
 check() { printf '   %-48s %s\n' "$1" "$(curl -s -o /dev/null -w '%{http_code}' "$2")"; }
 check "home (expect 200)" "$SITE/"
-check "category page (expect 200)" "$SITE/category/icu-bed"
+check "category page (expect 200)" "$SITE/category/icu-beds"
 check "uppercase category (expect 301)" "$SITE/category/ICU-beds"
 printf '   %-48s %s\n' "product name in page source (expect 1+)" \
   "$(curl -s "$SITE/products/stryker-1007-stretcher" | grep -c 'Stryker 1007' || true)"
