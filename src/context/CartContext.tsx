@@ -21,15 +21,30 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>(() => {
-    const saved = localStorage.getItem('bedmed-cart');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // Starts empty on the server and on first client render (identical HTML, no hydration mismatch),
+  // then loads the saved cart from localStorage.
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('bedmed-cart', JSON.stringify(items));
-  }, [items]);
+    try {
+      const saved = localStorage.getItem('bedmed-cart');
+      if (saved) setItems(JSON.parse(saved));
+    } catch {
+      /* corrupt or blocked storage: start empty */
+    }
+    setLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!loaded) return;
+    try {
+      localStorage.setItem('bedmed-cart', JSON.stringify(items));
+    } catch {
+      /* storage unavailable (private mode) */
+    }
+  }, [items, loaded]);
 
   const addToCart = (product: Product, quantity = 1) => {
     setItems(prev => {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '@/lib/router';
 import { useQuery } from '@tanstack/react-query';
 import { Mail, Phone, MapPin, Facebook, Twitter, Linkedin, Instagram, Info, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useContactInfo } from '@/hooks/useContactInfo';
 import { supabase } from '@/integrations/supabase/client';
-import { FOOTER_SETTINGS_KEY, isInternalUrl, renderCopyright, withFooterDefaults, type FooterLink } from '@/lib/footer';
+import { isInternalUrl, renderCopyright, withFooterDefaults, type FooterLink } from '@/lib/footer';
+import { queries } from '@/queries';
 import { cn } from '@/lib/utils';
 
 // Static class names so Tailwind keeps them.
@@ -30,33 +31,10 @@ export function Footer() {
   const [email, setEmail] = useState('');
   const [subscribing, setSubscribing] = useState(false);
 
-  // Footer content from Dashboard → Footer (defaults render immediately, so there is no flash).
-  const { data: saved } = useQuery({
-    queryKey: ['site-setting', FOOTER_SETTINGS_KEY],
-    staleTime: 5 * 60_000,
-    queryFn: async () => {
-      const { data } = await supabase.from('site_settings').select('value').eq('key', FOOTER_SETTINGS_KEY).maybeSingle();
-      return withFooterDefaults(data?.value);
-    },
-  });
+  // Footer content from Dashboard → Footer and pages marked "Show in footer" (both prefetched on the server).
+  const { data: saved } = useQuery(queries.footer());
   const f = saved ?? withFooterDefaults(null);
-
-  // Pages marked "Show in footer" in Dashboard → Pages (Privacy, Terms, Warranty, …).
-  const { data: footerPages = [] } = useQuery({
-    queryKey: ['footer-pages'],
-    staleTime: 5 * 60_000,
-    enabled: f.show_legal_links,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('site_pages')
-        .select('slug, title, footer_label')
-        .eq('published', true)
-        .eq('show_in_footer', true)
-        .order('footer_order', { ascending: true })
-        .order('title', { ascending: true });
-      return data || [];
-    },
-  });
+  const { data: footerPages = [] } = useQuery({ ...queries.footerPages(), enabled: f.show_legal_links });
 
   const socialIcons = [
     { Icon: Facebook, url: contactInfo.social_links?.facebook, label: 'Facebook' },

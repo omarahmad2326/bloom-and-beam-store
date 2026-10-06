@@ -1,4 +1,5 @@
-import DOMPurify from 'dompurify';
+// Same sanitizer in the browser and during server rendering (server side uses a jsdom window).
+import DOMPurify from 'isomorphic-dompurify';
 import { marked } from 'marked';
 
 // Content written before the rich-text editor was introduced is Markdown;
@@ -52,14 +53,32 @@ export function isContentEmpty(content: string | null | undefined): boolean {
   return toPlainText(content).length === 0;
 }
 
+const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', '#39': "'" };
+
+/** Text content of sanitized HTML: DOMParser in the browser, a tag/entity stripper on the server. */
+function htmlToText(html: string): string {
+  if (typeof DOMParser !== 'undefined') {
+    return new DOMParser().parseFromString(html, 'text/html').body.textContent || '';
+  }
+  return html
+    .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e: string) => {
+      if (e[0] === '#') {
+        const code = e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
+        return Number.isFinite(code) ? String.fromCodePoint(code) : m;
+      }
+      return ENTITIES[e.toLowerCase()] ?? m;
+    });
+}
+
 /** Plain text for cards, meta descriptions and structured data. */
 export function toPlainText(content: string | null | undefined, maxLength?: number): string {
   if (!content) return '';
   const html = sanitizeHtml(contentToHtml(content))
     .replace(/<\/(p|h[1-6]|li|blockquote|div)>/gi, '$& ')
     .replace(/<br\s*\/?>/gi, ' ');
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  const text = (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
+  const text = htmlToText(html).replace(/\s+/g, ' ').trim();
   return maxLength ? truncate(text, maxLength) : text;
 }
 

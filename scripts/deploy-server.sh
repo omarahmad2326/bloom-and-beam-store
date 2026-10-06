@@ -12,7 +12,8 @@
 # If SUPABASE_DB_URL is not set, the CLI link flow is used (needs SUPABASE_ACCESS_TOKEN).
 #
 # Order matters: database migration first, then the frontend build (the new
-# frontend reads columns the migration creates). nginx serves ./dist directly.
+# frontend reads columns the migration creates). nginx proxies to the Next.js server (pm2 app
+# "mrbedmed"); scripts/setup-next-server.sh sets that up once.
 set -euo pipefail
 
 PROJECT_REF="xgzjppyfkfjnwdrxpnpz"
@@ -26,7 +27,8 @@ die() { printf '\n\033[1;31mERROR: %s\033[0m\n' "$*" >&2; exit 1; }
 log "1/6 Pre-flight checks"
 command -v node >/dev/null || die "node is not installed"
 NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
-[ "$NODE_MAJOR" -ge 18 ] || die "Node 18+ required (found $(node -v))"
+NODE_MINOR="$(node -p 'process.versions.node.split(".")[1]')"
+{ [ "$NODE_MAJOR" -gt 20 ] || { [ "$NODE_MAJOR" -eq 20 ] && [ "$NODE_MINOR" -ge 9 ]; }; } || die "Node 20.9+ required (found $(node -v))"
 ok "node $(node -v)"
 [ -f supabase/migrations/20261006120000_cms_seo_upgrade.sql ] || die "new code not present; run: git pull origin main"
 ok "release code present ($(git rev-parse --short HEAD 2>/dev/null || echo 'no git'))"
@@ -85,23 +87,23 @@ else
   printf '   not set up yet: run "sudo bash scripts/setup-nginx-redirects.sh" once for real 301s.\n'
 fi
 
-log "5/6 Build frontend (previous build kept in dist.prev for rollback)"
-npm ci --no-audit --no-fund
-rm -rf dist.prev
-[ -d dist ] && cp -a dist dist.prev
-npm run build
-[ -f dist/index.html ] || die "build produced no dist/index.html"
-ok "dist/ rebuilt; nginx serves it immediately"
+log "5/6 Build and restart the Next.js site"
+if ! grep -qRs 'BEGIN mrbedmed_next' /etc/nginx/sites-enabled/ /etc/nginx/conf.d/; then
+  die "nginx is not proxying to Next.js yet; run once: sudo bash scripts/setup-next-server.sh"
+fi
+bash scripts/next-release.sh
 
 log "6/6 Smoke checks"
 check() { printf '   %-48s %s\n' "$1" "$(curl -s -o /dev/null -w '%{http_code}' "$2")"; }
 check "home (expect 200)" "$SITE/"
 check "category page (expect 200)" "$SITE/category/icu-bed"
 check "uppercase category (expect 301)" "$SITE/category/ICU-beds"
+printf '   %-48s %s\n' "product name in page source (expect 1+)" \
+  "$(curl -s "$SITE/products/stryker-1007-stretcher" | grep -c 'Stryker 1007' || true)"
 printf '   %-48s %s\n' "redirects table (expect 200)" \
   "$(curl -s -o /dev/null -w '%{http_code}' "$VITE_SUPABASE_URL/rest/v1/redirects?select=id&limit=1" -H "apikey: $VITE_SUPABASE_PUBLISHABLE_KEY")"
 printf '   %-48s %s\n' "sitemap URL count" \
-  "$(curl -s "$VITE_SUPABASE_URL/functions/v1/sitemap" -H "apikey: $VITE_SUPABASE_PUBLISHABLE_KEY" | grep -c '<url>' || true)"
+  "$(curl -s "$SITE/sitemap.xml" | grep -o '<url>' | wc -l)"
 
 printf '\n\033[1;32mRelease complete.\033[0m Hard-refresh the site (Cloudflare may cache for a few minutes).\n'
-printf 'Rollback frontend: rm -rf dist && mv dist.prev dist\n'
+printf 'Rollback: git checkout <previous commit> && bash scripts/next-release.sh\n'
