@@ -58,7 +58,7 @@ fi
 log "2/6 Database migration"
 $SB "${PUSH[@]}" --dry-run
 if [ "${YES:-}" != "1" ]; then
-  read -r -p "   The list above should show ONLY 20261006120000_cms_seo_upgrade.sql. Apply? [y/N] " answer
+  read -r -p "   Check the list above shows only this release's new migration(s). Apply? [y/N] " answer
   [ "$answer" = "y" ] || die "stopped before migration (nothing changed)"
 fi
 $SB "${PUSH[@]}"
