@@ -46,6 +46,7 @@ const AdminRedirects = lazy(() => import("./pages/admin/AdminRedirects"));
 const AdminAboutPage = lazy(() => import("./pages/admin/AdminAboutPage"));
 const AdminContactPage = lazy(() => import("./pages/admin/AdminContactPage"));
 const AdminPages = lazy(() => import("./pages/admin/AdminPages"));
+const AdminFooter = lazy(() => import("./pages/admin/AdminFooter"));
 
 const AdminFallback = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -107,6 +108,7 @@ const App = () => (
               <Route path="/admin/about" element={<AdminAboutPage />} />
               <Route path="/admin/contact-page" element={<AdminContactPage />} />
               <Route path="/admin/pages" element={<AdminPages />} />
+              <Route path="/admin/footer" element={<AdminFooter />} />
               {/* Admin-managed content pages (Privacy, Terms, Warranty, …). Static routes above take precedence. */}
               <Route path="/:slug" element={<SitePage />} />
               <Route path="*" element={<NotFound />} />
