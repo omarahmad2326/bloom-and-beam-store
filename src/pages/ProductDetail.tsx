@@ -18,6 +18,7 @@ import { productSchema } from '@/lib/schema';
 import { absoluteUrl } from '@/lib/site';
 import { toPlainText } from '@/lib/content';
 import type { Tables } from '@/integrations/supabase/types';
+import { resolveAlt } from '@/lib/imageAlt';
 
 type Product = Tables<'products'>;
 
@@ -79,8 +80,8 @@ const ProductDetail = () => {
 
   // ALT text per image, aligned with allImages.
   const imageAlts = [
-    ...(product?.image_url ? [product.image_alt || product.name] : []),
-    ...(product?.image_urls || []).map((_, i) => product?.image_alts?.[i] || `${product?.name} view ${i + 2}`),
+    ...(product?.image_url ? [resolveAlt(product.image_alt, product.name)] : []),
+    ...(product?.image_urls || []).map((_, i) => resolveAlt(product?.image_alts?.[i], product?.name ?? '')),
   ];
 
   const nextImage = useCallback(() => {
@@ -216,7 +217,7 @@ const ProductDetail = () => {
                 {allImages.length > 0 ? (
                   <img 
                     src={allImages[currentImageIndex]}
-                    alt={imageAlts[currentImageIndex] || product.name}
+                    alt={imageAlts[currentImageIndex] ?? product.name}
                     className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105" 
                   />
                 ) : (
@@ -274,7 +275,7 @@ const ProductDetail = () => {
                     >
                       <img 
                         src={img} 
-                        alt={imageAlts[index] || `${product.name} view ${index + 1}`}
+                        alt={imageAlts[index] ?? product.name}
                         className="w-full h-full object-cover"
                       />
                     </button>
@@ -395,7 +396,7 @@ const ProductDetail = () => {
                     <div className="bg-muted rounded-xl overflow-hidden aspect-square mb-3 relative perspective-1000">
                       <img 
                         src={relProduct.image_url || '/placeholder.svg'} 
-                        alt={relProduct.image_alt || relProduct.name}
+                        alt={resolveAlt(relProduct.image_alt, relProduct.name)}
                         className="w-full h-full object-contain p-4 rotate-360-hover preserve-3d"
                       />
                     </div>
@@ -457,7 +458,7 @@ const ProductDetail = () => {
           >
             <img
               src={allImages[currentImageIndex] || '/placeholder.svg'}
-              alt={imageAlts[currentImageIndex] || product?.name}
+              alt={imageAlts[currentImageIndex] ?? product?.name}
               className="max-w-full max-h-[80vh] object-contain mx-auto animate-scale-in"
             />
           </div>
@@ -481,7 +482,7 @@ const ProductDetail = () => {
                 >
                   <img 
                     src={img} 
-                    alt={imageAlts[index] || `View ${index + 1}`}
+                    alt={imageAlts[index] ?? product?.name}
                     className="w-full h-full object-cover"
                   />
                 </button>

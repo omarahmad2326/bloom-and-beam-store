@@ -19,6 +19,7 @@ import SeoFields, { customSchemaError } from '@/components/admin/SeoFields';
 import ListEditor, { cleanList } from '@/components/admin/ListEditor';
 import { slugify } from '@/lib/slugify';
 import type { Tables } from '@/integrations/supabase/types';
+import { altForSave, countImagesMissingAlt, isAltMissing, missingAltMessage, resolveAlt } from '@/lib/imageAlt';
 
 type Service = Tables<'services'>;
 
@@ -48,7 +49,7 @@ const emptyForm = {
   features: [] as string[],
   areas_served: [] as string[],
   image_url: '',
-  image_alt: '',
+  image_alt: null as string | null,
   sort_order: 0,
   published: true,
   meta_title: '',
@@ -111,7 +112,7 @@ export default function AdminServices() {
       features: service.features || [],
       areas_served: service.areas_served || [],
       image_url: service.image_url || '',
-      image_alt: service.image_alt || '',
+      image_alt: service.image_alt,
       sort_order: service.sort_order ?? 0,
       published: service.published,
       meta_title: service.meta_title || '',
@@ -130,6 +131,13 @@ export default function AdminServices() {
     }
 
     const slug = slugify(formData.slug);
+    if (formData.published) {
+      const missingAlts = (formData.image_url && isAltMissing(formData.image_alt) ? 1 : 0) + countImagesMissingAlt(formData.overview_html);
+      if (missingAlts > 0) {
+        toast.error(`${missingAltMessage(missingAlts)} You can save it as a draft first.`);
+        return;
+      }
+    }
     const schemaError = customSchemaError(formData.custom_schema);
     if (schemaError) {
       toast.error(`Custom schema: ${schemaError}`);
@@ -159,7 +167,7 @@ export default function AdminServices() {
       features: cleanList(formData.features),
       areas_served: cleanList(formData.areas_served),
       image_url: formData.image_url || null,
-      image_alt: formData.image_alt.trim() || null,
+      image_alt: formData.image_url ? altForSave(formData.image_alt) : null,
       sort_order: formData.sort_order,
       published: formData.published,
       meta_title: formData.meta_title.trim() || null,
@@ -303,6 +311,9 @@ export default function AdminServices() {
                   onImageChange={(image_url) => set({ image_url })}
                   alt={formData.image_alt}
                   onAltChange={(image_alt) => set({ image_alt })}
+                  allowDecorative
+                  requireAlt={formData.published}
+                  fileNameBase={formData.slug || slugify(formData.title)}
                   label="Hero Image (optional)"
                 />
 
@@ -311,6 +322,7 @@ export default function AdminServices() {
                   value={formData.overview_html}
                   onChange={(overview_html) => set({ overview_html })}
                   imageBucket="site-images"
+                  imageFileBase={formData.slug || slugify(formData.title)}
                 />
 
                 <div className="space-y-2">

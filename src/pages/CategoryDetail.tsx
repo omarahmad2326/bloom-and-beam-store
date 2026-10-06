@@ -19,6 +19,7 @@ import { faqPageSchema } from '@/lib/schema';
 import { absoluteUrl } from '@/lib/site';
 import { isContentEmpty, toPlainText } from '@/lib/content';
 import type { Tables } from '@/integrations/supabase/types';
+import { resolveAlt } from '@/lib/imageAlt';
 
 type Category = Tables<'categories'>;
 type Product = Tables<'products'>;
@@ -166,7 +167,7 @@ export default function CategoryDetail() {
         {category.image_url ? (
           <img
             src={category.image_url}
-            alt={category.image_alt || category.name}
+            alt={resolveAlt(category.image_alt, category.name)}
             className="absolute inset-0 h-full w-full object-cover opacity-30"
           />
         ) : (
@@ -267,7 +268,7 @@ export default function CategoryDetail() {
                             <div className="aspect-square mb-4 overflow-hidden rounded-lg bg-muted perspective-1000">
                               <img
                                 src={product.image_url}
-                                alt={product.image_alt || product.name}
+                                alt={resolveAlt(product.image_alt, product.name)}
                                 loading="lazy"
                                 className="w-full h-full object-contain p-4 rotate-360-hover preserve-3d"
                               />

@@ -1,4 +1,5 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { resolveAlt } from '@/lib/imageAlt';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Layout } from '@/components/layout/Layout';
@@ -10,6 +11,8 @@ interface Product {
   id: string;
   name: string;
   image_url: string | null;
+  image_alt: string | null;
+  image_alts: (string | null)[] | null;
   image_urls: string[] | null;
   price: number;
   category: string;
@@ -67,7 +70,7 @@ const ProductGallery = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, image_url, image_urls, price, category, slug')
+        .select('id, name, image_url, image_alt, image_alts, price, category, slug')
         .eq('category', categoryFilter);
       
       if (error) throw error;
@@ -146,7 +149,7 @@ const ProductGallery = () => {
                     <div className="aspect-square bg-muted overflow-hidden perspective-1000">
                       <img
                         src={displayImage}
-                        alt={product.name}
+                        alt={resolveAlt(product.image_url ? product.image_alt : product.image_alts?.[0], product.name)}
                         className="w-full h-full object-contain p-4 rotate-360-hover preserve-3d"
                       />
                     </div>

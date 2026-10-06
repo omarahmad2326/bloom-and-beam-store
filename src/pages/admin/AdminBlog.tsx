@@ -18,6 +18,7 @@ import SeoFields, { customSchemaError } from '@/components/admin/SeoFields';
 import { slugify } from '@/lib/slugify';
 import { isContentEmpty } from '@/lib/content';
 import type { Tables } from '@/integrations/supabase/types';
+import { altForSave, countImagesMissingAlt, isAltMissing, missingAltMessage, resolveAlt } from '@/lib/imageAlt';
 
 type BlogPost = Tables<'blog_posts'>;
 
@@ -27,7 +28,7 @@ const emptyForm = {
   excerpt: '',
   content: '',
   image_url: '',
-  image_alt: '',
+  image_alt: null as string | null,
   category: 'Industry News',
   author: 'Mr.Bedmed Team',
   published: false,
@@ -83,7 +84,7 @@ export default function AdminBlog() {
       excerpt: post.excerpt || '',
       content: post.content,
       image_url: post.image_url || '',
-      image_alt: post.image_alt || '',
+      image_alt: post.image_alt,
       category: post.category,
       author: post.author,
       published: post.published,
@@ -111,6 +112,15 @@ export default function AdminBlog() {
     }
 
     const slug = slugify(formData.slug);
+    // ALT text is required to publish (drafts can be saved without it).
+    if (formData.published) {
+      const missingAlts =
+        (formData.image_url && isAltMissing(formData.image_alt) ? 1 : 0) + countImagesMissingAlt(formData.content);
+      if (missingAlts > 0) {
+        toast.error(`${missingAltMessage(missingAlts)} You can save it as a draft first.`);
+        return;
+      }
+    }
     const schemaError = customSchemaError(formData.custom_schema);
     if (schemaError) {
       toast.error(`Custom schema: ${schemaError}`);
@@ -135,7 +145,7 @@ export default function AdminBlog() {
       excerpt: formData.excerpt || null,
       content: formData.content,
       image_url: formData.image_url || null,
-      image_alt: formData.image_alt.trim() || null,
+      image_alt: formData.image_url ? altForSave(formData.image_alt) : null,
       category: formData.category,
       author: formData.author,
       published: formData.published,
@@ -249,6 +259,7 @@ export default function AdminBlog() {
                   value={formData.content}
                   onChange={(content) => set({ content })}
                   imageBucket="blog-images"
+                  imageFileBase={formData.slug || slugify(formData.title)}
                   minHeight={320}
                 />
                 <div className="grid grid-cols-2 gap-4">
@@ -275,6 +286,9 @@ export default function AdminBlog() {
                   onImageChange={(image_url) => set({ image_url })}
                   alt={formData.image_alt}
                   onAltChange={(image_alt) => set({ image_alt })}
+                  allowDecorative
+                  requireAlt={formData.published}
+                  fileNameBase={formData.slug || slugify(formData.title)}
                   label="Featured Image"
                 />
                 <div className="flex items-center gap-2">
@@ -322,7 +336,7 @@ export default function AdminBlog() {
                   {post.image_url && (
                     <img
                       src={post.image_url}
-                      alt={post.image_alt || post.title}
+                      alt={resolveAlt(post.image_alt, post.title)}
                       className="w-20 h-14 object-cover rounded"
                     />
                   )}

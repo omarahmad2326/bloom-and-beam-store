@@ -18,6 +18,7 @@ import MultiImageUpload from '@/components/admin/MultiImageUpload';
 import RichTextEditor from '@/components/admin/RichTextEditor';
 import SlugField, { validateSlugForSave, slugErrorFromDb } from '@/components/admin/SlugField';
 import SeoFields, { customSchemaError } from '@/components/admin/SeoFields';
+import { altForSave, countImagesMissingAlt, isAltMissing, missingAltMessage, resolveAlt } from '@/lib/imageAlt';
 
 interface CategoryOption {
   id: string;
@@ -57,7 +58,7 @@ const emptyForm = {
   price: '',
   category: '',
   image_urls: [] as string[],
-  image_alts: [] as string[],
+  image_alts: [] as (string | null)[],
   in_stock: true,
   sort_order: 0,
   make: '',
@@ -162,6 +163,13 @@ export default function AdminParts() {
     }
 
     const slug = slugify(formData.slug);
+    const missingAlts =
+      formData.image_urls.filter((_, i) => isAltMissing(formData.image_alts[i])).length +
+      countImagesMissingAlt(formData.description);
+    if (missingAlts > 0) {
+      toast.error(missingAltMessage(missingAlts));
+      return;
+    }
     const schemaError = customSchemaError(formData.custom_schema);
     if (schemaError) {
       toast.error(`Custom schema: ${schemaError}`);
@@ -188,7 +196,7 @@ export default function AdminParts() {
       price: parseFloat(formData.price) || 0,
       category: formData.category,
       image_urls: formData.image_urls,
-      image_alts: formData.image_urls.map((_, i) => (formData.image_alts[i] || '').trim()),
+      image_alts: formData.image_urls.map((_, i) => altForSave(formData.image_alts[i])),
       in_stock: formData.in_stock,
       sort_order: formData.sort_order,
       make: formData.make || null,
@@ -393,6 +401,7 @@ export default function AdminParts() {
                   value={formData.description}
                   onChange={(description) => set({ description })}
                   imageBucket="parts-images"
+                  imageFileBase={formData.slug || slugify(formData.name)}
                   minHeight={160}
                 />
                 <div className="grid grid-cols-2 gap-4">
@@ -425,6 +434,9 @@ export default function AdminParts() {
                   onImagesChange={(image_urls, image_alts) => set({ image_urls, image_alts })}
                   alts={formData.image_alts}
                   onAltsChange={(image_alts) => set({ image_alts })}
+                  allowDecorative
+                  requireAlt
+                  fileNameBase={formData.slug || slugify(formData.name)}
                   label="Images (Carousel)"
                   maxImages={10}
                 />
@@ -474,7 +486,7 @@ export default function AdminParts() {
                   {part.image_urls && part.image_urls.length > 0 && (
                     <img
                       src={part.image_urls[0]}
-                      alt={part.image_alts?.[0] || part.name}
+                      alt={resolveAlt(part.image_alts?.[0], part.name)}
                       className="w-16 h-16 object-cover rounded"
                     />
                   )}

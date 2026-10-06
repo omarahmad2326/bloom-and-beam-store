@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { SEOHead } from '@/components/seo/SEOHead';
 import { toPlainText } from '@/lib/content';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { resolveAlt } from '@/lib/imageAlt';
 
 interface BlogPost {
   id: string;
@@ -98,7 +99,7 @@ const Blog = () => {
                       {featuredPost.image_url ? (
                         <img
                           src={featuredPost.image_url}
-                          alt={featuredPost.image_alt || featuredPost.title}
+                          alt={resolveAlt(featuredPost.image_alt, featuredPost.title)}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (
@@ -161,7 +162,7 @@ const Blog = () => {
                         {post.image_url ? (
                           <img
                             src={post.image_url}
-                            alt={post.image_alt || post.title}
+                            alt={resolveAlt(post.image_alt, post.title)}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                           />
                         ) : (

@@ -5,6 +5,7 @@ import { Product } from '@/data/products';
 import { useCart } from '@/context/CartContext';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { resolveAlt } from '@/lib/imageAlt';
 
 interface ProductCardProps {
   product: Product;
@@ -57,7 +58,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
         <Link to={`/products/${product.slug || product.id}`} className="block h-full">
           <img
             src={product.image}
-            alt={product.name}
+            alt={resolveAlt(product.imageAlt, product.name)}
             className="w-full h-full object-contain p-6 rotate-360-hover preserve-3d"
           />
         </Link>

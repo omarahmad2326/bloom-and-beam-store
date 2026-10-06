@@ -19,6 +19,7 @@ import FaqListEditor, { cleanFaqs, type FaqItem } from '@/components/admin/FaqLi
 import { slugify } from '@/lib/slugify';
 import { toPlainText } from '@/lib/content';
 import type { Tables } from '@/integrations/supabase/types';
+import { altForSave, countImagesMissingAlt, isAltMissing, missingAltMessage, resolveAlt } from '@/lib/imageAlt';
 
 type Category = Tables<'categories'>;
 
@@ -27,7 +28,7 @@ const emptyForm = {
   slug: '',
   description: '',
   image_url: '',
-  image_alt: '',
+  image_alt: null as string | null,
   sort_order: 0,
   intro_html: '',
   why_choose: [] as string[],
@@ -92,7 +93,7 @@ export default function AdminCategories() {
       slug: category.slug,
       description: category.description || '',
       image_url: category.image_url || '',
-      image_alt: category.image_alt || '',
+      image_alt: category.image_alt,
       sort_order: category.sort_order ?? 0,
       intro_html: category.intro_html || '',
       why_choose: category.why_choose || [],
@@ -118,6 +119,11 @@ export default function AdminCategories() {
     }
 
     const slug = slugify(formData.slug);
+    const missingAlts = (formData.image_url && isAltMissing(formData.image_alt) ? 1 : 0) + countImagesMissingAlt(formData.intro_html);
+    if (missingAlts > 0) {
+      toast.error(missingAltMessage(missingAlts));
+      return;
+    }
     const schemaError = customSchemaError(formData.custom_schema);
     if (schemaError) {
       toast.error(`Custom schema: ${schemaError}`);
@@ -142,7 +148,7 @@ export default function AdminCategories() {
       slug,
       description: formData.description || null,
       image_url: formData.image_url || null,
-      image_alt: formData.image_alt.trim() || null,
+      image_alt: formData.image_url ? altForSave(formData.image_alt) : null,
       sort_order: formData.sort_order,
       intro_html: formData.intro_html || null,
       why_choose: cleanList(formData.why_choose),
@@ -275,6 +281,9 @@ export default function AdminCategories() {
                   onImageChange={(image_url) => set({ image_url })}
                   alt={formData.image_alt}
                   onAltChange={(image_alt) => set({ image_alt })}
+                  allowDecorative
+                  requireAlt
+                  fileNameBase={formData.slug || slugify(formData.name)}
                   label="Category Image (optional, used as the page hero)"
                 />
 
@@ -287,6 +296,7 @@ export default function AdminCategories() {
                     value={formData.intro_html}
                     onChange={(intro_html) => set({ intro_html })}
                     imageBucket="product-images"
+                    imageFileBase={formData.slug || slugify(formData.name)}
                     minHeight={160}
                   />
                   <ListEditor id="why_choose" label="Why Choose" items={formData.why_choose} onChange={(why_choose) => set({ why_choose })} placeholder="e.g. 360° patient access" />
@@ -342,7 +352,7 @@ export default function AdminCategories() {
                   {category.image_url && (
                     <img
                       src={category.image_url}
-                      alt={category.image_alt || category.name}
+                      alt={resolveAlt(category.image_alt, category.name)}
                       className="w-full h-32 object-cover rounded mb-3"
                     />
                   )}

@@ -205,6 +205,7 @@ const Products = () => {
                     price: product.price,
                     originalPrice: product.original_price || undefined,
                     image: product.image_url || '/placeholder.svg',
+                    imageAlt: product.image_url ? product.image_alt : null,
                     category: product.category,
                     features: product.features || [],
                     inStock: product.in_stock,

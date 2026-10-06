@@ -334,7 +334,7 @@ export type Database = {
           custom_schema: string | null
           description: string | null
           id: string
-          image_alts: string[]
+          image_alts: (string | null)[]
           image_urls: string[] | null
           in_stock: boolean
           make: string | null
@@ -359,7 +359,7 @@ export type Database = {
           custom_schema?: string | null
           description?: string | null
           id?: string
-          image_alts?: string[]
+          image_alts?: (string | null)[]
           image_urls?: string[] | null
           in_stock?: boolean
           make?: string | null
@@ -384,7 +384,7 @@ export type Database = {
           custom_schema?: string | null
           description?: string | null
           id?: string
-          image_alts?: string[]
+          image_alts?: (string | null)[]
           image_urls?: string[] | null
           in_stock?: boolean
           make?: string | null
@@ -415,7 +415,7 @@ export type Database = {
           features: string[] | null
           id: string
           image_alt: string | null
-          image_alts: string[]
+          image_alts: (string | null)[]
           image_url: string | null
           image_urls: string[] | null
           in_stock: boolean
@@ -439,7 +439,7 @@ export type Database = {
           features?: string[] | null
           id?: string
           image_alt?: string | null
-          image_alts?: string[]
+          image_alts?: (string | null)[]
           image_url?: string | null
           image_urls?: string[] | null
           in_stock?: boolean
@@ -463,7 +463,7 @@ export type Database = {
           features?: string[] | null
           id?: string
           image_alt?: string | null
-          image_alts?: string[]
+          image_alts?: (string | null)[]
           image_url?: string | null
           image_urls?: string[] | null
           in_stock?: boolean

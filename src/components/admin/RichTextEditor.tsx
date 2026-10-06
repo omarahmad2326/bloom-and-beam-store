@@ -13,6 +13,8 @@ import {
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { contentToHtml, sanitizeHtml } from '@/lib/content';
+import { uploadImage } from '@/lib/imageUpload';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +32,8 @@ interface RichTextEditorProps {
   placeholder?: string;
   /** Storage bucket for images inserted into the content. */
   imageBucket?: ImageBucket;
+  /** Uploaded images are named from this (usually the item's slug), e.g. my-post.webp. */
+  imageFileBase?: string;
   minHeight?: number;
   id?: string;
 }
@@ -40,6 +44,7 @@ export default function RichTextEditor({
   label,
   placeholder = 'Start writing…',
   imageBucket = 'site-images',
+  imageFileBase,
   minHeight = 220,
   id,
 }: RichTextEditorProps) {
@@ -120,7 +125,7 @@ export default function RichTextEditor({
       {editor && (
         <>
           <LinkDialog editor={editor} open={linkOpen} onOpenChange={setLinkOpen} />
-          <ImageDialog editor={editor} open={imageOpen} onOpenChange={setImageOpen} bucket={imageBucket} />
+          <ImageDialog editor={editor} open={imageOpen} onOpenChange={setImageOpen} bucket={imageBucket} fileBase={imageFileBase} />
         </>
       )}
     </div>
@@ -359,10 +364,11 @@ function LinkDialog({ editor, open, onOpenChange }: { editor: Editor; open: bool
 /* ------------------------------------------------------------------------- */
 
 function ImageDialog({
-  editor, open, onOpenChange, bucket,
-}: { editor: Editor; open: boolean; onOpenChange: (o: boolean) => void; bucket: ImageBucket }) {
+  editor, open, onOpenChange, bucket, fileBase,
+}: { editor: Editor; open: boolean; onOpenChange: (o: boolean) => void; bucket: ImageBucket; fileBase?: string }) {
   const [src, setSrc] = useState('');
   const [alt, setAlt] = useState('');
+  const [decorative, setDecorative] = useState(false);
   const [editing, setEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -374,23 +380,27 @@ function ImageDialog({
     setEditing(isImage);
     setSrc((attrs.src as string) || '');
     setAlt((attrs.alt as string) || '');
+    setDecorative(isImage && attrs.alt === '');
   }, [open, editor]);
 
   const upload = async (file: File) => {
     if (!file.type.startsWith('image/')) { toast.error('Please select an image file'); return; }
     if (file.size > 5 * 1024 * 1024) { toast.error('Image must be less than 5MB'); return; }
     setUploading(true);
-    const ext = file.name.split('.').pop();
-    const path = `content/${crypto.randomUUID()}.${ext}`;
-    const { error } = await supabase.storage.from(bucket).upload(path, file, { cacheControl: '3600' });
-    setUploading(false);
-    if (error) { toast.error(error.message || 'Upload failed'); return; }
-    setSrc(supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl);
+    try {
+      setSrc(await uploadImage(bucket, file, { nameBase: fileBase, folder: 'content' }));
+    } catch (error) {
+      toast.error((error as Error).message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
   };
 
+  const altReady = decorative || !!alt.trim();
   const apply = () => {
-    if (!src.trim() || !alt.trim()) return;
-    const attrs = { src: src.trim(), alt: alt.trim(), title: alt.trim() };
+    if (!src.trim() || !altReady) return;
+    // Decorative images get alt="" so screen readers skip them.
+    const attrs = decorative ? { src: src.trim(), alt: '', title: null } : { src: src.trim(), alt: alt.trim(), title: alt.trim() };
     if (editing) editor.chain().focus().updateAttributes('image', attrs).run();
     else editor.chain().focus().setImage(attrs).run();
     onOpenChange(false);
@@ -425,13 +435,17 @@ function ImageDialog({
             <Label htmlFor="rte-img-alt">
               ALT text <span className="text-destructive">*</span>
             </Label>
-            <Input id="rte-img-alt" value={alt} onChange={(e) => setAlt(e.target.value)} placeholder="Describe the image, e.g. Stryker 1007 stretcher side view" />
+            <Input id="rte-img-alt" value={decorative ? '' : alt} disabled={decorative} onChange={(e) => setAlt(e.target.value)} placeholder={decorative ? 'Decorative: no ALT text (alt="")' : 'Describe the image, e.g. Stryker 1007 stretcher side view'} />
+            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Checkbox checked={decorative} onCheckedChange={(checked) => setDecorative(!!checked)} />
+              Decorative image (adds no information, so screen readers skip it)
+            </label>
             <p className="text-xs text-muted-foreground">Read by screen readers and used by Google Images.</p>
           </div>
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button type="button" onClick={apply} disabled={!src.trim() || !alt.trim() || uploading}>
+          <Button type="button" onClick={apply} disabled={!src.trim() || !altReady || uploading}>
             {editing ? 'Update' : 'Insert'}
           </Button>
         </DialogFooter>

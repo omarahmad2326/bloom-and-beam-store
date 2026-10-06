@@ -19,6 +19,8 @@ interface HeroSettings {
   title_line3: string;
   description: string;
   hero_image_url: string;
+  /** null/undefined = not set (fallback text), '' = decorative */
+  hero_image_alt?: string | null;
   stats: { value: string; label: string }[];
   trust_badges: { icon: string; text: string }[];
 }
@@ -70,7 +72,7 @@ export default function AdminSettings() {
       return;
     }
 
-    data?.forEach((setting: { key: string; value: any }) => {
+    data?.forEach((setting: { key: string; value: unknown }) => {
       if (setting.key === 'hero') {
         setHeroSettings(setting.value as HeroSettings);
       } else if (setting.key === 'testimonials') {
@@ -259,6 +261,10 @@ export default function AdminSettings() {
                   bucket="site-images"
                   currentUrl={heroSettings.hero_image_url}
                   onImageChange={(url) => setHeroSettings({ ...heroSettings, hero_image_url: url })}
+                  alt={heroSettings.hero_image_alt ?? null}
+                  onAltChange={(hero_image_alt) => setHeroSettings({ ...heroSettings, hero_image_alt })}
+                  allowDecorative
+                  fileNameBase="hospital-bed-stretcher-hero"
                   label="Hero Image"
                 />
               </CardContent>

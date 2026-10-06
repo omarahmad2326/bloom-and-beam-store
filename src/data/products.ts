@@ -14,6 +14,8 @@ export interface Product {
   price: number;
   originalPrice?: number;
   image: string;
+  /** ALT text from the dashboard ('' = decorative); falls back to name. */
+  imageAlt?: string | null;
   category: string;
   features: string[];
   inStock: boolean;

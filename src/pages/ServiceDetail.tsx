@@ -14,6 +14,7 @@ import { serviceSchema } from '@/lib/schema';
 import { absoluteUrl } from '@/lib/site';
 import { toPlainText } from '@/lib/content';
 import type { Tables } from '@/integrations/supabase/types';
+import { resolveAlt } from '@/lib/imageAlt';
 
 type Service = Tables<'services'>;
 
@@ -104,7 +105,7 @@ const ServiceDetail = () => {
           {service.image_url ? (
             <img
               src={service.image_url}
-              alt={service.image_alt || service.title}
+              alt={resolveAlt(service.image_alt, service.title)}
               className="absolute inset-0 h-full w-full object-cover opacity-40"
             />
           ) : (

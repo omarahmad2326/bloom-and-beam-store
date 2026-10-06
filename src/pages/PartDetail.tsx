@@ -16,6 +16,7 @@ import { absoluteUrl } from '@/lib/site';
 import { toPlainText } from '@/lib/content';
 import { cn } from '@/lib/utils';
 import type { Tables } from '@/integrations/supabase/types';
+import { resolveAlt } from '@/lib/imageAlt';
 
 type Part = Tables<'parts'>;
 
@@ -136,7 +137,7 @@ const PartDetail = () => {
 
   const path = `/part/${part.slug || part.id}`;
   const summary = part.short_description || toPlainText(part.description, 160);
-  const altFor = (i: number) => part.image_alts?.[i] || `${part.name} - Image ${i + 1}`;
+  const altFor = (i: number) => resolveAlt(part.image_alts?.[i], part.name);
 
   const handleAddToCart = () => {
     addToCart(

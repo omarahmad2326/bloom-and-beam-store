@@ -17,6 +17,7 @@ import SlugField, { validateSlugForSave, slugErrorFromDb } from '@/components/ad
 import SeoFields, { customSchemaError } from '@/components/admin/SeoFields';
 import { slugify } from '@/lib/slugify';
 import { isContentEmpty, toPlainText } from '@/lib/content';
+import { altForSave, countImagesMissingAlt, isAltMissing, missingAltMessage, resolveAlt } from '@/lib/imageAlt';
 
 type SitePage = Tables<'site_pages'>;
 
@@ -92,6 +93,10 @@ export default function AdminPages() {
     }
     if (isContentEmpty(formData.content_html)) {
       toast.error('Page content is required');
+      return;
+    }
+    if (formData.published && countImagesMissingAlt(formData.content_html) > 0) {
+      toast.error(missingAltMessage(countImagesMissingAlt(formData.content_html)));
       return;
     }
     const schemaError = customSchemaError(formData.custom_schema);
@@ -192,6 +197,7 @@ export default function AdminPages() {
                   value={formData.content_html}
                   onChange={(content_html) => set({ content_html })}
                   imageBucket="site-images"
+                  imageFileBase={formData.slug || slugify(formData.title)}
                   minHeight={320}
                 />
 

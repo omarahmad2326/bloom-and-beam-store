@@ -5,6 +5,7 @@ import { ArrowRight, Shield, CheckCircle, Truck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import heroHospitalBed from '@/assets/products/hero-hospital-bed.png';
+import { resolveAlt } from '@/lib/imageAlt';
 
 interface HeroSettings {
   badge: string;
@@ -13,6 +14,7 @@ interface HeroSettings {
   title_line3: string;
   description: string;
   hero_image_url: string;
+  hero_image_alt?: string | null;
   stats: { value: string; label: string }[];
   trust_badges: { icon: string; text: string }[];
 }
@@ -125,7 +127,7 @@ export function Hero() {
             <div className="absolute inset-0 bg-gradient-radial from-primary/10 via-transparent to-transparent" />
             <img
               src={heroImage}
-              alt="Premium Hospital Stretcher"
+              alt={settings.hero_image_url ? resolveAlt(settings.hero_image_alt, 'Hospital stretcher from Mrbedmed') : 'Hospital stretcher from Mrbedmed'}
               className="w-full animate-float drop-shadow-2xl"
             />
             {/* Floating Stats */}

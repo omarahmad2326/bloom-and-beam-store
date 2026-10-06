@@ -21,6 +21,7 @@ import ListEditor, { cleanList } from '@/components/admin/ListEditor';
 import { slugify } from '@/lib/slugify';
 import { toPlainText } from '@/lib/content';
 import type { Tables } from '@/integrations/supabase/types';
+import { altForSave, countImagesMissingAlt, isAltMissing, missingAltMessage, resolveAlt } from '@/lib/imageAlt';
 
 type Product = Tables<'products'>;
 
@@ -38,9 +39,9 @@ const emptyForm = {
   price: '',
   original_price: '',
   image_url: '',
-  image_alt: '',
+  image_alt: null as string | null,
   image_urls: [] as string[],
-  image_alts: [] as string[],
+  image_alts: [] as (string | null)[],
   category: '',
   features: [] as string[],
   in_stock: true,
@@ -112,7 +113,7 @@ export default function AdminProducts() {
       price: product.price.toString(),
       original_price: product.original_price?.toString() || '',
       image_url: product.image_url || '',
-      image_alt: product.image_alt || '',
+      image_alt: product.image_alt,
       image_urls: product.image_urls || [],
       image_alts: product.image_alts || [],
       category: product.category,
@@ -135,6 +136,14 @@ export default function AdminProducts() {
     }
 
     const slug = slugify(formData.slug);
+    const missingAlts =
+      (formData.image_url && isAltMissing(formData.image_alt) ? 1 : 0) +
+      formData.image_urls.filter((_, i) => isAltMissing(formData.image_alts[i])).length +
+      countImagesMissingAlt(formData.description);
+    if (missingAlts > 0) {
+      toast.error(missingAltMessage(missingAlts));
+      return;
+    }
     const schemaError = customSchemaError(formData.custom_schema);
     if (schemaError) {
       toast.error(`Custom schema: ${schemaError}`);
@@ -162,9 +171,9 @@ export default function AdminProducts() {
       price: parseFloat(formData.price) || 0,
       original_price: formData.original_price ? parseFloat(formData.original_price) : null,
       image_url: formData.image_url || null,
-      image_alt: formData.image_alt.trim() || null,
+      image_alt: formData.image_url ? altForSave(formData.image_alt) : null,
       image_urls: formData.image_urls,
-      image_alts: formData.image_urls.map((_, i) => (formData.image_alts[i] || '').trim()),
+      image_alts: formData.image_urls.map((_, i) => altForSave(formData.image_alts[i])),
       category: formData.category,
       category_id: categories.find((c) => c.name === formData.category)?.id ?? null,
       features: cleanList(formData.features),
@@ -316,6 +325,7 @@ export default function AdminProducts() {
                   value={formData.description}
                   onChange={(description) => set({ description })}
                   imageBucket="product-images"
+                  imageFileBase={formData.slug || slugify(formData.name)}
                 />
 
                 <div className="grid grid-cols-2 gap-4">
@@ -348,6 +358,9 @@ export default function AdminProducts() {
                   onImageChange={(url) => set({ image_url: url })}
                   alt={formData.image_alt}
                   onAltChange={(image_alt) => set({ image_alt })}
+                  allowDecorative
+                  requireAlt
+                  fileNameBase={formData.slug || slugify(formData.name)}
                   label="Main Product Image"
                 />
                 <MultiImageUpload
@@ -356,6 +369,9 @@ export default function AdminProducts() {
                   onImagesChange={(image_urls, image_alts) => set({ image_urls, image_alts })}
                   alts={formData.image_alts}
                   onAltsChange={(image_alts) => set({ image_alts })}
+                  allowDecorative
+                  requireAlt
+                  fileNameBase={formData.slug || slugify(formData.name)}
                   label="Additional Images (Gallery)"
                   maxImages={10}
                 />
@@ -414,7 +430,7 @@ export default function AdminProducts() {
                   {product.image_url && (
                     <img
                       src={product.image_url}
-                      alt={product.image_alt || product.name}
+                      alt={resolveAlt(product.image_alt, product.name)}
                       className="w-16 h-16 object-cover rounded"
                     />
                   )}

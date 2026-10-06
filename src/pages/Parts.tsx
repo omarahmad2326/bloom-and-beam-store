@@ -17,13 +17,14 @@ import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { toPlainText } from '@/lib/content';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { resolveAlt } from '@/lib/imageAlt';
 
 interface Part {
   id: string;
   name: string;
   description: string | null;
   short_description: string | null;
-  image_alts: string[] | null;
+  image_alts: (string | null)[] | null;
   price: number;
   category: string;
   image_urls: string[];
@@ -34,7 +35,7 @@ interface Part {
   slug: string | null;
 }
 
-const PartImageCarousel = ({ images, name }: { images: string[]; name: string }) => {
+const PartImageCarousel = ({ images, name, alts }: { images: string[]; name: string; alts?: (string | null)[] | null }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   if (!images || images.length === 0) {
@@ -52,7 +53,7 @@ const PartImageCarousel = ({ images, name }: { images: string[]; name: string })
     <div className="relative w-full h-48 group">
       <img
         src={images[currentIndex]}
-        alt={`${name} - Image ${currentIndex + 1}`}
+        alt={resolveAlt(alts?.[currentIndex], name)}
         className="w-full h-48 object-contain rounded-lg bg-white"
       />
       {images.length > 1 && (
@@ -273,7 +274,7 @@ const Parts = () => {
                   >
                     {/* Image */}
                     <Link to={`/part/${part.slug || part.id}`}>
-                      <PartImageCarousel images={part.image_urls} name={part.name} />
+                      <PartImageCarousel images={part.image_urls} name={part.name} alts={part.image_alts} />
                     </Link>
 
                     {/* Content */}

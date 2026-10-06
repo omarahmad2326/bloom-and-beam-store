@@ -7,6 +7,7 @@ import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { toPlainText } from '@/lib/content';
+import { resolveAlt } from '@/lib/imageAlt';
 
 interface DBProduct {
   id: string;
@@ -123,7 +124,7 @@ export function FeaturedProducts() {
                   >
                     <img
                       src={product.image_url || '/placeholder.svg'}
-                      alt={product.image_alt || product.name}
+                      alt={resolveAlt(product.image_alt, product.name)}
                       className="w-full h-full object-contain p-6 rotate-360-hover preserve-3d"
                     />
                   </div>

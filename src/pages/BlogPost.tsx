@@ -16,6 +16,7 @@ import { blogPostingSchema } from '@/lib/schema';
 import { absoluteUrl } from '@/lib/site';
 import { toPlainText } from '@/lib/content';
 import type { Tables } from '@/integrations/supabase/types';
+import { resolveAlt } from '@/lib/imageAlt';
 
 type BlogPost = Tables<'blog_posts'>;
 
@@ -171,7 +172,7 @@ const BlogPostPage = () => {
           <div className="max-w-4xl mx-auto">
             <img
               src={post.image_url}
-              alt={post.image_alt || post.title}
+              alt={resolveAlt(post.image_alt, post.title)}
               title={post.title}
               loading="lazy"
               className="w-full aspect-video object-cover rounded-2xl shadow-xl"
@@ -218,7 +219,7 @@ const BlogPostPage = () => {
                     {relatedPost.image_url ? (
                       <img
                         src={relatedPost.image_url}
-                        alt={relatedPost.image_alt || relatedPost.title}
+                        alt={resolveAlt(relatedPost.image_alt, relatedPost.title)}
                         loading="lazy"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />

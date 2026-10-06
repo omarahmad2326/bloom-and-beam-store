@@ -80,6 +80,15 @@ describe('RichTextEditor', () => {
     await waitFor(() => expect(container.querySelectorAll('.ProseMirror table tr').length).toBe(2));
   });
 
+  it('keeps alt="" on decorative images (not dropped, not filled in)', async () => {
+    const { container } = wrap(<RichTextEditor value={'<p>Hi</p><img src="https://x/deco.png" alt="">'} onChange={() => {}} />);
+    await waitFor(() => {
+      const img = container.querySelector('.ProseMirror img');
+      expect(img?.hasAttribute('alt')).toBe(true);
+      expect(img?.getAttribute('alt')).toBe('');
+    });
+  });
+
   it('loads saved HTML including image ALT text', async () => {
     const { container } = wrap(<RichTextEditor value={'<p>Hi</p><img src="https://x/a.png" alt="Side view">'} onChange={() => {}} />);
     await waitFor(() => expect(container.querySelector('.ProseMirror img')?.getAttribute('alt')).toBe('Side view'));
