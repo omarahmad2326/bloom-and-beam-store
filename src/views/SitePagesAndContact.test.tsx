@@ -92,7 +92,9 @@ describe('SitePage (/:slug)', () => {
     tables.site_pages = [];
     tables.redirects = [];
     wrap(<SitePage />, '/nope', '/:slug');
-    await waitFor(() => screen.getByText('404'));
+    await waitFor(() => screen.getByRole('heading', { level: 1, name: 'Page not found' }));
+    expect(screen.getByRole('search')).toBeTruthy();
+    expect(screen.getByRole('link', { name: /call/i }).getAttribute('href')).toMatch(/^tel:/);
   });
 });
 

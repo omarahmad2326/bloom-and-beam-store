@@ -50,6 +50,11 @@ describe('nginx redirect map', () => {
     ['/category/WheelChair', '/category/wheelchair'],
     ['/products/test-bed-2', '/products/test-bed-two'],
     ['/products/test-bed-2/', '/products/test-bed-two'],
+    // Old gallery URLs, one hop straight to the final category page.
+    ['/gallery/er-stretcher', '/category/er-stretcher'],
+    ['/gallery/WheelChair/', '/category/wheelchair'],
+    ['/gallery/ICU-bed', '/category/icu-beds'],
+    ['/gallery/icu-beds', '/category/icu-beds'],
   ])('%s → %s', (uri, target) => {
     expect(lookup(uri)).toBe(target);
   });

@@ -16,8 +16,8 @@ const nextConfig = {
   },
   async redirects() {
     return [
-      // Old gallery URLs → category pages.
-      { source: '/gallery/:slug', destination: '/category/:slug', permanent: true },
+      // Old gallery URLs → category pages (301, as search engines expect for moved pages).
+      { source: '/gallery/:slug', destination: '/category/:slug', statusCode: 301 },
     ];
   },
 };
