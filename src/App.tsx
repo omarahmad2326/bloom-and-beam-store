@@ -45,6 +45,7 @@ const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 const AdminHomeCards = lazy(() => import("./pages/admin/AdminHomeCards"));
 const AdminContactSettings = lazy(() => import("./pages/admin/AdminContactSettings"));
 const AdminRedirects = lazy(() => import("./pages/admin/AdminRedirects"));
+const AdminAboutPage = lazy(() => import("./pages/admin/AdminAboutPage"));
 
 const AdminFallback = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -103,6 +104,7 @@ const App = () => (
               <Route path="/admin/home-cards" element={<AdminHomeCards />} />
               <Route path="/admin/contact-settings" element={<AdminContactSettings />} />
               <Route path="/admin/redirects" element={<AdminRedirects />} />
+              <Route path="/admin/about" element={<AdminAboutPage />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/warranty" element={<Warranty />} />

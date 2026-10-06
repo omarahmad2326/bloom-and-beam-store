@@ -17,7 +17,8 @@ import {
   MessageSquare,
   LayoutGrid,
   Phone,
-  CornerUpRight
+  CornerUpRight,
+  Info
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -87,6 +88,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { path: '/admin/products', icon: Package, label: 'Products' },
     { path: '/admin/categories', icon: FolderOpen, label: 'Categories' },
     { path: '/admin/home-cards', icon: LayoutGrid, label: 'Home Cards' },
+    { path: '/admin/about', icon: Info, label: 'About Page' },
     { path: '/admin/parts', icon: Wrench, label: 'Parts' },
     { path: '/admin/services', icon: Wrench, label: 'Services' },
     { path: '/admin/blog', icon: FileText, label: 'Blog Posts' },

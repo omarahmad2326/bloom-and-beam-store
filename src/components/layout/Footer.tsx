@@ -52,8 +52,8 @@ export function Footer() {
               </span>
             </Link>
             <p className="text-background/70 mb-6">
-              Leading provider of premium medical stretchers and hospital equipment. 
-              Trusted by healthcare facilities worldwide since 1995.
+              Hospital beds, stretchers and biomedical equipment services for
+              healthcare facilities across Texas.
             </p>
             <div className="flex gap-4">
               {socialIcons.map(({ Icon, url }, i) => (
