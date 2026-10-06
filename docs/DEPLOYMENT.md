@@ -57,6 +57,16 @@ After the setup, `scripts/deploy-server.sh` syncs the map on every release.
 
 Alternative, if you have Cloudflare access: `deploy/cloudflare-redirects/` contains an equivalent Cloudflare Worker (`npx wrangler deploy`).
 
+### www → non-www (one-time)
+
+`https://mrbedmed.com` is the main domain. Every `www.mrbedmed.com` URL 301s to the same path and query string on the main domain, in one hop. nginx does this; no Cloudflare access is needed. One-time setup on the server:
+
+```sh
+sudo bash scripts/setup-www-redirect.sh
+```
+
+It removes `www.mrbedmed.com` from the existing bedmed `server_name` lines, adds a redirect-only `server` block for www (ports 80 and 443), backs up to `/root/nginx-backup-www-*`, and restores everything if `nginx -t` fails. It finishes by checking the URLs from the brief through Cloudflare.
+
 ## 4. Frontend
 
 ```sh
