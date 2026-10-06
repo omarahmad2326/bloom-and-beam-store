@@ -72,15 +72,17 @@ else
   printf '   skipped (no SUPABASE_ACCESS_TOKEN). The current sitemap keeps working; deploy later with a token.\n'
 fi
 
-log "4/6 Edge redirect worker (Cloudflare)"
-if [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
+log "4/6 Redirects (301)"
+if [ -f /etc/nginx/conf.d/mrbedmed-redirects.conf ]; then
+  node scripts/sync-redirects.mjs && ok "nginx redirect map synced (cron keeps it current)"
+elif [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
   export CLOUDFLARE_API_TOKEN
   ( cd deploy/cloudflare-redirects && npx --yes wrangler@4 deploy \
       --var "SUPABASE_URL:${VITE_SUPABASE_URL}" \
       --var "SUPABASE_ANON_KEY:${VITE_SUPABASE_PUBLISHABLE_KEY}" )
   ok "worker deployed"
 else
-  printf '   skipped (no CLOUDFLARE_API_TOKEN). Old URLs still redirect in the browser, but not as HTTP 301 yet.\n'
+  printf '   not set up yet: run "sudo bash scripts/setup-nginx-redirects.sh" once for real 301s.\n'
 fi
 
 log "5/6 Build frontend (previous build kept in dist.prev for rollback)"
@@ -95,7 +97,7 @@ log "6/6 Smoke checks"
 check() { printf '   %-48s %s\n' "$1" "$(curl -s -o /dev/null -w '%{http_code}' "$2")"; }
 check "home (expect 200)" "$SITE/"
 check "category page (expect 200)" "$SITE/category/icu-bed"
-check "uppercase category (expect 301 with worker)" "$SITE/category/ICU-bed"
+check "uppercase category (expect 301)" "$SITE/category/ICU-beds"
 printf '   %-48s %s\n' "redirects table (expect 200)" \
   "$(curl -s -o /dev/null -w '%{http_code}' "$VITE_SUPABASE_URL/rest/v1/redirects?select=id&limit=1" -H "apikey: $VITE_SUPABASE_PUBLISHABLE_KEY")"
 printf '   %-48s %s\n' "sitemap URL count" \

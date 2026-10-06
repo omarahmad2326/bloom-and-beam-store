@@ -41,18 +41,21 @@ npx supabase functions deploy sitemap
 
 The sitemap now lists categories and services from the database and always uses `https://mrbedmed.com`. The hard-coded `/category/ICU-bed` entry is gone.
 
-## 3. Edge redirects (Cloudflare Worker)
+## 3. Real 301 redirects (nginx on the droplet)
 
-1. Put the publishable (anon) key in `deploy/cloudflare-redirects/wrangler.toml` → `SUPABASE_ANON_KEY`.
-2. Confirm the `mrbedmed.com` DNS record is **proxied** (orange cloud) in Cloudflare.
-3. Deploy:
+The site sits behind Cloudflare, but 301s are served by **nginx on the droplet** and Cloudflare passes them through, so no Cloudflare access is needed.
+
+One-time setup, on the server from `/var/www/bedmed`:
 
 ```sh
-cd deploy/cloudflare-redirects
-npx wrangler deploy
+sudo bash scripts/setup-nginx-redirects.sh
 ```
 
-If the site is not behind Cloudflare, the 301s must come from the origin instead (for example, nginx on the droplet). The in-app fallback still sends visitors to the new URL, but it is a client-side redirect, not a 301.
+It installs an nginx `map` that `scripts/sync-redirects.mjs` generates from the `redirects` table, adds a one-line rule to the server block that serves `/var/www/bedmed`, and installs a cron job that re-syncs every minute (log: `/var/log/mrbedmed-redirects.log`). Config files are backed up to `/root/nginx-backup-*`, and if `nginx -t` fails everything is restored. Category URLs in any letter case 301 to lowercase.
+
+After the setup, `scripts/deploy-server.sh` syncs the map on every release.
+
+Alternative, if you have Cloudflare access: `deploy/cloudflare-redirects/` contains an equivalent Cloudflare Worker (`npx wrangler deploy`).
 
 ## 4. Frontend
 
@@ -91,7 +94,7 @@ Deploy `dist/` to DigitalOcean the same way as before. The SPA needs every unkno
 
 ### Category pages
 
-- `/category/icu-bed` lists its products. `/category/ICU-bed` 301s to the lowercase URL.
+- `/category/icu-beds` lists its products. The old `/category/ICU-bed` 301s to it.
 - Two categories show different text. Empty sections are hidden.
 - Category pages are now edited in Dashboard → Categories. Categories that had no specific copy before (and the newly created ICU Bed category) show only the hero, products and quote box until someone fills in their content.
 

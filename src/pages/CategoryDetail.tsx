@@ -30,7 +30,8 @@ const whyChooseIcons = [Check, Clock, Settings, Award];
 const pgQuote = (value: string) => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
 async function fetchCategory(slug: string): Promise<Category | null> {
-  const { data, error } = await supabase.from('categories').select('*').eq('slug', slug).maybeSingle();
+  // Case-insensitive: some legacy slugs contain capitals (e.g. "Chair-stretcher").
+  const { data, error } = await supabase.from('categories').select('*').ilike('slug', slug).limit(1).maybeSingle();
   if (error) throw error;
   if (data) return data;
 
@@ -115,7 +116,7 @@ export default function CategoryDetail() {
     );
   }
 
-  const path = `/category/${category.slug}`;
+  const path = `/category/${category.slug.toLowerCase()}`;
   const faqs = asFaqs(category.faqs);
   const hasIntro = !isContentEmpty(category.intro_html);
   const phone = contactInfo.phone || '+1 469 767 8853';

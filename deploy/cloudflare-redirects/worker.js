@@ -62,7 +62,8 @@ async function lookup(keys, env) {
   const quoted = keys.map((k) => `"${k.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(',');
   const params = new URLSearchParams({ select: 'from_path,to_path,status_code', from_path: `in.(${quoted})` });
   const res = await fetch(`${env.SUPABASE_URL}/rest/v1/redirects?${params}`, {
-    headers: { apikey: env.SUPABASE_ANON_KEY, Authorization: `Bearer ${env.SUPABASE_ANON_KEY}` },
+    // New-style publishable keys (sb_publishable_…) go in `apikey` only, not as a Bearer token.
+    headers: { apikey: env.SUPABASE_ANON_KEY },
     // Cache lookups at the edge for a minute so the database is not hit on every page view.
     cf: { cacheTtl: 60, cacheEverything: true },
   });

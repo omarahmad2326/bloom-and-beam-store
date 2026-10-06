@@ -103,7 +103,7 @@ export default function AdminRedirects() {
           <h1 className="text-3xl font-bold text-foreground">Redirects</h1>
           <p className="text-muted-foreground">
             Old URLs that 301-redirect to new ones. Redirects are added automatically when the slug of a published
-            product, part, category, service or blog post changes.
+            product, part, category, service or blog post changes. New redirects reach the live server within about a minute.
           </p>
         </div>
 
