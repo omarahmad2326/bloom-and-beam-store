@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/hooks/useAuth";
@@ -24,23 +25,32 @@ import Cart from "./pages/Cart";
 import OrderHistory from "./pages/OrderHistory";
 import Auth from "./pages/Auth";
 import AccountSettings from "./pages/AccountSettings";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminProducts from "./pages/admin/AdminProducts";
-import AdminCategories from "./pages/admin/AdminCategories";
-import AdminParts from "./pages/admin/AdminParts";
-import AdminServices from "./pages/admin/AdminServices";
-import AdminBlog from "./pages/admin/AdminBlog";
-import AdminFAQs from "./pages/admin/AdminFAQs";
-import AdminOrders from "./pages/admin/AdminOrders";
-import AdminMessages from "./pages/admin/AdminMessages";
-import AdminSettings from "./pages/admin/AdminSettings";
-import AdminHomeCards from "./pages/admin/AdminHomeCards";
-import AdminContactSettings from "./pages/admin/AdminContactSettings";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Warranty from "./pages/Warranty";
 import NotFound from "./pages/NotFound";
 import SitemapXml from "./pages/SitemapXml";
+
+// Admin pages (and the rich-text editor they use) load on demand, keeping the public bundle small.
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminProducts = lazy(() => import("./pages/admin/AdminProducts"));
+const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
+const AdminParts = lazy(() => import("./pages/admin/AdminParts"));
+const AdminServices = lazy(() => import("./pages/admin/AdminServices"));
+const AdminBlog = lazy(() => import("./pages/admin/AdminBlog"));
+const AdminFAQs = lazy(() => import("./pages/admin/AdminFAQs"));
+const AdminOrders = lazy(() => import("./pages/admin/AdminOrders"));
+const AdminMessages = lazy(() => import("./pages/admin/AdminMessages"));
+const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
+const AdminHomeCards = lazy(() => import("./pages/admin/AdminHomeCards"));
+const AdminContactSettings = lazy(() => import("./pages/admin/AdminContactSettings"));
+const AdminRedirects = lazy(() => import("./pages/admin/AdminRedirects"));
+
+const AdminFallback = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+  </div>
+);
 
 // Redirect old /gallery/ URLs to /category/
 const GalleryRedirect = () => {
@@ -58,6 +68,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <Suspense fallback={<AdminFallback />}>
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/sitemap.xml" element={<SitemapXml />} />
@@ -91,11 +102,13 @@ const App = () => (
               <Route path="/admin/settings" element={<AdminSettings />} />
               <Route path="/admin/home-cards" element={<AdminHomeCards />} />
               <Route path="/admin/contact-settings" element={<AdminContactSettings />} />
+              <Route path="/admin/redirects" element={<AdminRedirects />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/warranty" element={<Warranty />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </Suspense>
           </BrowserRouter>
         </CartProvider>
       </AuthProvider>

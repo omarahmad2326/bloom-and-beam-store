@@ -3,6 +3,7 @@ import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 import { 
   ClipboardCheck, 
   Wrench, 
@@ -67,6 +68,7 @@ const Services = () => {
   if (loading) {
     return (
       <Layout>
+        <BreadcrumbSchema items={[{ name: 'Services', path: '/services' }]} />
         <section className="py-16 md:py-24">
           <div className="container text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
@@ -78,6 +80,7 @@ const Services = () => {
 
   return (
     <Layout>
+      <BreadcrumbSchema items={[{ name: 'Services', path: '/services' }]} />
       <section className="py-16 md:py-24">
         <div className="container">
           <div className="text-center mb-16">

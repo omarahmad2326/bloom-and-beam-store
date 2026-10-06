@@ -7,24 +7,17 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ShoppingCart, Minus, Plus, ArrowLeft, ChevronLeft, ChevronRight, X, Maximize2 } from 'lucide-react';
 import { SEOHead } from '@/components/seo/SEOHead';
+import { JsonLd, CustomJsonLd } from '@/components/seo/JsonLd';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { RedirectOrFallback } from '@/components/RedirectOrFallback';
+import RichContent from '@/components/RichContent';
+import { productSchema } from '@/lib/schema';
+import { absoluteUrl } from '@/lib/site';
+import { toPlainText } from '@/lib/content';
 import { cn } from '@/lib/utils';
+import type { Tables } from '@/integrations/supabase/types';
 
-interface Part {
-  id: string;
-  name: string;
-  description: string | null;
-  price: number;
-  category: string;
-  image_urls: string[];
-  in_stock: boolean;
-  make: string | null;
-  model: string | null;
-  sku: string | null;
-  condition: string;
-  part_no: string | null;
-  asset_no: string | null;
-  oem_no: string | null;
-}
+type Part = Tables<'parts'>;
 
 const PartDetail = () => {
   const { id } = useParams();
@@ -126,16 +119,24 @@ const PartDetail = () => {
 
   if (!part) {
     return (
-      <Layout>
-        <div className="container py-20 text-center">
-          <h1 className="text-2xl font-bold mb-4">Part not found</h1>
-          <Button asChild variant="outline">
-            <Link to="/parts">Back to Parts</Link>
-          </Button>
-        </div>
-      </Layout>
+      <RedirectOrFallback
+        fallback={
+          <Layout>
+            <div className="container py-20 text-center">
+              <h1 className="text-2xl font-bold mb-4">Part not found</h1>
+              <Button asChild variant="outline">
+                <Link to="/parts">Back to Parts</Link>
+              </Button>
+            </div>
+          </Layout>
+        }
+      />
     );
   }
+
+  const path = `/part/${part.slug || part.id}`;
+  const summary = part.short_description || toPlainText(part.description, 160);
+  const altFor = (i: number) => part.image_alts?.[i] || `${part.name} - Image ${i + 1}`;
 
   const handleAddToCart = () => {
     addToCart(
@@ -144,7 +145,7 @@ const PartDetail = () => {
         name: part.name,
         price: part.price,
         image: part.image_urls?.[0] || '',
-        description: part.description || '',
+        description: summary,
         category: part.category,
         features: [],
         inStock: part.in_stock,
@@ -159,10 +160,27 @@ const PartDetail = () => {
   return (
     <Layout>
       <SEOHead
-        title={`${part.name} | Mr.Bedmed Parts`}
-        description={part.description || `${part.name} - OEM replacement part from Mr.Bedmed`}
-        canonicalUrl={`${window.location.origin}/part/${id}`}
+        title={part.meta_title || `${part.name} | Mr.Bedmed Parts`}
+        description={part.meta_description || summary || `${part.name} - OEM replacement part from Mr.Bedmed`}
+        canonicalUrl={absoluteUrl(path)}
+        ogImage={absoluteUrl(part.image_urls?.[0])}
       />
+      <JsonLd
+        id="product"
+        data={productSchema({
+          name: part.name,
+          path,
+          image: part.image_urls?.[0],
+          description: part.short_description || part.description,
+          brand: part.make,
+          sku: part.sku || part.part_no,
+          price: part.price,
+          inStock: part.in_stock,
+          condition: part.condition,
+        })}
+      />
+      <BreadcrumbSchema items={[{ name: 'Parts', path: '/parts' }, { name: part.name, path }]} />
+      <CustomJsonLd value={part.custom_schema} />
 
       <section className="py-12 md:py-20">
         <div className="container">
@@ -182,7 +200,7 @@ const PartDetail = () => {
                   <>
                     <img
                       src={images[currentImageIndex]}
-                      alt={`${part.name} - Image ${currentImageIndex + 1}`}
+                      alt={altFor(currentImageIndex)}
                       className="w-full h-96 object-contain transition-transform duration-300 group-hover:scale-105"
                     />
                     
@@ -234,7 +252,7 @@ const PartDetail = () => {
                           : 'border-transparent hover:border-muted-foreground/50'
                       )}
                     >
-                      <img src={img} alt={`Thumbnail ${i + 1}`} className="w-full h-full object-cover" />
+                      <img src={img} alt={altFor(i)} className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>
@@ -265,10 +283,11 @@ const PartDetail = () => {
               </div>
 
               {/* Description */}
+              {part.short_description && (
+                <p className="text-muted-foreground text-lg">{part.short_description}</p>
+              )}
               {part.description && (
-                <div className="prose prose-sm max-w-none">
-                  <p className="text-muted-foreground text-lg">{part.description}</p>
-                </div>
+                <RichContent content={part.description} className="max-w-none" />
               )}
 
               {/* Add to Cart */}
@@ -400,7 +419,7 @@ const PartDetail = () => {
           >
             <img
               src={images[currentImageIndex]}
-              alt={part.name}
+              alt={altFor(currentImageIndex)}
               className="max-w-full max-h-[80vh] object-contain mx-auto animate-scale-in"
             />
           </div>
@@ -424,7 +443,7 @@ const PartDetail = () => {
                 >
                   <img 
                     src={img} 
-                    alt={`View ${index + 1}`}
+                    alt={altFor(index)}
                     className="w-full h-full object-cover"
                   />
                 </button>

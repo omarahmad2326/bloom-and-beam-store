@@ -15,11 +15,15 @@ import {
 } from '@/components/ui/select';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
+import { toPlainText } from '@/lib/content';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 interface Part {
   id: string;
   name: string;
   description: string | null;
+  short_description: string | null;
+  image_alts: string[] | null;
   price: number;
   category: string;
   image_urls: string[];
@@ -145,7 +149,7 @@ const Parts = () => {
         name: part.name,
         price: part.price,
         image: part.image_urls?.[0] || '',
-        description: part.description || '',
+        description: part.short_description || toPlainText(part.description, 200),
         category: part.category,
         features: [],
         inStock: part.in_stock,
@@ -159,6 +163,7 @@ const Parts = () => {
 
   return (
     <Layout>
+      <BreadcrumbSchema items={[{ name: 'Parts', path: '/parts' }]} />
       <SEOHead
         title="Spare Parts - OEM Replacement Parts | Mr.Bedmed"
         description="OEM replacement parts for all Mr.Bedmed medical equipment. Search by manufacturer, model, or part number."
@@ -294,8 +299,8 @@ const Parts = () => {
                       </Link>
 
                       {/* Description */}
-                      {part.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2">{part.description}</p>
+                      {(part.short_description || part.description) && (
+                        <p className="text-sm text-muted-foreground line-clamp-2">{part.short_description || toPlainText(part.description, 160)}</p>
                       )}
 
                       {/* Price & Stock */}

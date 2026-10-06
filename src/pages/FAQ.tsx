@@ -4,6 +4,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { supabase } from '@/integrations/supabase/client';
 import { SEOHead } from '@/components/seo/SEOHead';
 import { FAQSchema } from '@/components/seo/FAQSchema';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 interface FAQ {
   id: string;
@@ -46,6 +47,7 @@ const FAQ = () => {
 
   return (
     <Layout>
+      <BreadcrumbSchema items={[{ name: 'FAQ', path: '/faq' }]} />
       <SEOHead
         title="FAQ - Frequently Asked Questions | Mr.Bedmed"
         description="Find answers to common questions about Mr.Bedmed medical equipment, warranty, shipping, installation, and more."

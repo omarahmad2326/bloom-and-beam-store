@@ -9,10 +9,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, X, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import { useAuth } from '@/hooks/useAuth';
-import { generateSlug } from '@/lib/slugify';
+import { slugify } from '@/lib/slugify';
+import { toPlainText } from '@/lib/content';
+import MultiImageUpload from '@/components/admin/MultiImageUpload';
+import RichTextEditor from '@/components/admin/RichTextEditor';
+import SlugField, { validateSlugForSave, slugErrorFromDb } from '@/components/admin/SlugField';
+import SeoFields, { customSchemaError } from '@/components/admin/SeoFields';
 
 interface CategoryOption {
   id: string;
@@ -37,7 +42,35 @@ interface Part {
   part_no: string | null;
   asset_no: string | null;
   oem_no: string | null;
+  short_description: string | null;
+  image_alts: string[];
+  meta_title: string | null;
+  meta_description: string | null;
+  custom_schema: string | null;
 }
+
+const emptyForm = {
+  name: '',
+  slug: '',
+  short_description: '',
+  description: '',
+  price: '',
+  category: '',
+  image_urls: [] as string[],
+  image_alts: [] as string[],
+  in_stock: true,
+  sort_order: 0,
+  make: '',
+  model: '',
+  sku: '',
+  condition: 'new',
+  part_no: '',
+  asset_no: '',
+  oem_no: '',
+  meta_title: '',
+  meta_description: '',
+  custom_schema: '',
+};
 
 export default function AdminParts() {
   const { isAdmin } = useAuth();
@@ -46,24 +79,10 @@ export default function AdminParts() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPart, setEditingPart] = useState<Part | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    slug: '',
-    description: '',
-    price: '',
-    category: '',
-    image_urls: [] as string[],
-    in_stock: true,
-    sort_order: 0,
-    make: '',
-    model: '',
-    sku: '',
-    condition: 'new',
-    part_no: '',
-    asset_no: '',
-    oem_no: ''
-  });
+  const [saving, setSaving] = useState(false);
+  const [slugError, setSlugError] = useState<string | null>(null);
+  const [formData, setFormData] = useState(emptyForm);
+  const set = (patch: Partial<typeof emptyForm>) => setFormData((f) => ({ ...f, ...patch }));
 
   useEffect(() => {
     fetchParts();
@@ -98,34 +117,26 @@ export default function AdminParts() {
 
   const resetForm = () => {
     setFormData({
-      name: '',
-      slug: '',
-      description: '',
-      price: '',
+      ...emptyForm,
       category: categoryOptions.length > 0 ? categoryOptions[0].name : '',
-      image_urls: [],
-      in_stock: true,
       sort_order: parts.length,
-      make: '',
-      model: '',
-      sku: '',
-      condition: 'new',
-      part_no: '',
-      asset_no: '',
-      oem_no: ''
     });
     setEditingPart(null);
+    setSlugError(null);
   };
 
   const handleEdit = (part: Part) => {
     setEditingPart(part);
+    setSlugError(null);
     setFormData({
       name: part.name,
       slug: part.slug || '',
+      short_description: part.short_description || '',
       description: part.description || '',
       price: part.price.toString(),
       category: part.category,
       image_urls: part.image_urls || [],
+      image_alts: part.image_alts || [],
       in_stock: part.in_stock,
       sort_order: part.sort_order,
       make: part.make || '',
@@ -134,55 +145,12 @@ export default function AdminParts() {
       condition: part.condition || 'new',
       part_no: part.part_no || '',
       asset_no: part.asset_no || '',
-      oem_no: part.oem_no || ''
+      oem_no: part.oem_no || '',
+      meta_title: part.meta_title || '',
+      meta_description: part.meta_description || '',
+      custom_schema: part.custom_schema || '',
     });
     setDialogOpen(true);
-  };
-
-  const handleNameChange = (name: string) => {
-    const newData: typeof formData = { ...formData, name };
-    if (!editingPart && (!formData.slug || formData.slug === generateSlug(formData.name))) {
-      newData.slug = generateSlug(name);
-    }
-    setFormData(newData);
-  };
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-    const filePath = `parts/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('parts-images')
-      .upload(filePath, file);
-
-    if (uploadError) {
-      toast.error('Failed to upload image');
-      setUploading(false);
-      return;
-    }
-
-    const { data: urlData } = supabase.storage
-      .from('parts-images')
-      .getPublicUrl(filePath);
-
-    setFormData({
-      ...formData,
-      image_urls: [...formData.image_urls, urlData.publicUrl]
-    });
-    setUploading(false);
-    toast.success('Image uploaded');
-  };
-
-  const removeImage = (index: number) => {
-    setFormData({
-      ...formData,
-      image_urls: formData.image_urls.filter((_, i) => i !== index)
-    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -193,15 +161,34 @@ export default function AdminParts() {
       return;
     }
 
-    const slug = formData.slug || generateSlug(formData.name);
+    const slug = slugify(formData.slug);
+    const schemaError = customSchemaError(formData.custom_schema);
+    if (schemaError) {
+      toast.error(`Custom schema: ${schemaError}`);
+      return;
+    }
+
+    setSaving(true);
+    const slugProblem = await validateSlugForSave('parts', slug, {
+      excludeId: editingPart?.id,
+      originalSlug: editingPart?.slug,
+    });
+    if (slugProblem) {
+      setSlugError(slugProblem);
+      toast.error(slugProblem);
+      setSaving(false);
+      return;
+    }
 
     const partData = {
       name: formData.name,
       slug,
+      short_description: formData.short_description.trim() || null,
       description: formData.description || null,
       price: parseFloat(formData.price) || 0,
       category: formData.category,
       image_urls: formData.image_urls,
+      image_alts: formData.image_urls.map((_, i) => (formData.image_alts[i] || '').trim()),
       in_stock: formData.in_stock,
       sort_order: formData.sort_order,
       make: formData.make || null,
@@ -210,37 +197,28 @@ export default function AdminParts() {
       condition: formData.condition,
       part_no: formData.part_no || null,
       asset_no: formData.asset_no || null,
-      oem_no: formData.oem_no || null
+      oem_no: formData.oem_no || null,
+      meta_title: formData.meta_title.trim() || null,
+      meta_description: formData.meta_description.trim() || null,
+      custom_schema: formData.custom_schema.trim() || null,
     };
 
-    if (editingPart) {
-      const { error } = await supabase
-        .from('parts')
-        .update(partData)
-        .eq('id', editingPart.id);
+    const { error } = editingPart
+      ? await supabase.from('parts').update(partData).eq('id', editingPart.id)
+      : await supabase.from('parts').insert([partData]);
+    setSaving(false);
 
-      if (error) {
-        toast.error('Failed to update part');
-      } else {
-        toast.success('Part updated');
-        fetchParts();
-        setDialogOpen(false);
-        resetForm();
-      }
-    } else {
-      const { error } = await supabase
-        .from('parts')
-        .insert([partData]);
-
-      if (error) {
-        toast.error('Failed to create part');
-      } else {
-        toast.success('Part created');
-        fetchParts();
-        setDialogOpen(false);
-        resetForm();
-      }
+    if (error) {
+      const slugMsg = slugErrorFromDb(error);
+      if (slugMsg) setSlugError(slugMsg);
+      toast.error(slugMsg || `Failed to ${editingPart ? 'update' : 'create'} part`);
+      return;
     }
+
+    toast.success(editingPart ? 'Part updated' : 'Part created');
+    fetchParts();
+    setDialogOpen(false);
+    resetForm();
   };
 
   const handleDelete = async (id: string) => {
@@ -274,12 +252,12 @@ export default function AdminParts() {
           </div>
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
-              <Button disabled={!isAdmin}>
+              <Button disabled={!isAdmin} onClick={resetForm}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Part
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingPart ? 'Edit Part' : 'Add New Part'}</DialogTitle>
               </DialogHeader>
@@ -290,7 +268,7 @@ export default function AdminParts() {
                     <Input
                       id="name"
                       value={formData.name}
-                      onChange={(e) => handleNameChange(e.target.value)}
+                      onChange={(e) => set({ name: e.target.value })}
                       required
                     />
                   </div>
@@ -298,7 +276,7 @@ export default function AdminParts() {
                     <Label htmlFor="category">Category</Label>
                     <Select
                       value={formData.category}
-                      onValueChange={(value) => setFormData({ ...formData, category: value })}
+                      onValueChange={(value) => set({ category: value })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select category" />
@@ -313,26 +291,24 @@ export default function AdminParts() {
                     </Select>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="slug">URL Slug</Label>
-                  <Input
-                    id="slug"
-                    value={formData.slug}
-                    onChange={(e) => setFormData({ ...formData, slug: generateSlug(e.target.value) })}
-                    placeholder="auto-generated-from-name"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    URL preview: /part/{formData.slug || 'auto-generated'}
-                  </p>
-                </div>
-                
+                <SlugField
+                  table="parts"
+                  value={formData.slug}
+                  onChange={(slug) => { set({ slug }); setSlugError(null); }}
+                  title={formData.name}
+                  autoFill={!editingPart}
+                  excludeId={editingPart?.id}
+                  originalSlug={editingPart?.slug}
+                  error={slugError}
+                />
+
                 {/* Condition Dropdown */}
                 <div className="space-y-2">
                   <Label htmlFor="condition">Condition</Label>
                   <select
                     id="condition"
                     value={formData.condition}
-                    onChange={(e) => setFormData({ ...formData, condition: e.target.value })}
+                    onChange={(e) => set({ condition: e.target.value })}
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   >
                     <option value="new">New</option>
@@ -348,7 +324,7 @@ export default function AdminParts() {
                     <Input
                       id="part_no"
                       value={formData.part_no}
-                      onChange={(e) => setFormData({ ...formData, part_no: e.target.value })}
+                      onChange={(e) => set({ part_no: e.target.value })}
                       placeholder="e.g., P-12345"
                     />
                   </div>
@@ -357,7 +333,7 @@ export default function AdminParts() {
                     <Input
                       id="asset_no"
                       value={formData.asset_no}
-                      onChange={(e) => setFormData({ ...formData, asset_no: e.target.value })}
+                      onChange={(e) => set({ asset_no: e.target.value })}
                       placeholder="e.g., A-67890"
                     />
                   </div>
@@ -366,7 +342,7 @@ export default function AdminParts() {
                     <Input
                       id="oem_no"
                       value={formData.oem_no}
-                      onChange={(e) => setFormData({ ...formData, oem_no: e.target.value })}
+                      onChange={(e) => set({ oem_no: e.target.value })}
                       placeholder="e.g., OEM-11111"
                     />
                   </div>
@@ -379,7 +355,7 @@ export default function AdminParts() {
                     <Input
                       id="make"
                       value={formData.make}
-                      onChange={(e) => setFormData({ ...formData, make: e.target.value })}
+                      onChange={(e) => set({ make: e.target.value })}
                       placeholder="e.g., Stryker"
                     />
                   </div>
@@ -388,7 +364,7 @@ export default function AdminParts() {
                     <Input
                       id="model"
                       value={formData.model}
-                      onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                      onChange={(e) => set({ model: e.target.value })}
                       placeholder="e.g., InTouch"
                     />
                   </div>
@@ -397,20 +373,28 @@ export default function AdminParts() {
                     <Input
                       id="sku"
                       value={formData.sku}
-                      onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                      onChange={(e) => set({ sku: e.target.value })}
                       placeholder="e.g., STR-001"
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
+                  <Label htmlFor="short_description">Short Description</Label>
                   <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={3}
+                    id="short_description"
+                    value={formData.short_description}
+                    onChange={(e) => set({ short_description: e.target.value })}
+                    rows={2}
+                    placeholder="One or two sentences, used on part cards and in Google's product data"
                   />
                 </div>
+                <RichTextEditor
+                  label="Description"
+                  value={formData.description}
+                  onChange={(description) => set({ description })}
+                  imageBucket="parts-images"
+                  minHeight={160}
+                />
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="price">Price ($)</Label>
@@ -419,7 +403,7 @@ export default function AdminParts() {
                       type="number"
                       step="0.01"
                       value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                      onChange={(e) => set({ price: e.target.value })}
                       required
                     />
                   </div>
@@ -429,61 +413,44 @@ export default function AdminParts() {
                       id="sort_order"
                       type="number"
                       value={formData.sort_order}
-                      onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })}
+                      onChange={(e) => set({ sort_order: parseInt(e.target.value) || 0 })}
                     />
                   </div>
                 </div>
                 
-                {/* Image Carousel Upload */}
-                <div className="space-y-2">
-                  <Label>Images (Carousel)</Label>
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {formData.image_urls.map((url, index) => (
-                      <div key={index} className="relative group">
-                        <img src={url} alt={`Part ${index + 1}`} className="w-20 h-20 object-cover rounded" />
-                        <button
-                          type="button"
-                          onClick={() => removeImage(index)}
-                          className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <label className="flex items-center justify-center w-full h-20 border-2 border-dashed border-border rounded cursor-pointer hover:bg-muted/50">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                      disabled={uploading}
-                    />
-                    {uploading ? (
-                      <span className="text-muted-foreground">Uploading...</span>
-                    ) : (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Upload className="h-4 w-4" />
-                        <span>Add Image</span>
-                      </div>
-                    )}
-                  </label>
-                </div>
+                <MultiImageUpload
+                  bucket="parts-images"
+                  folder="parts"
+                  currentUrls={formData.image_urls}
+                  onImagesChange={(image_urls, image_alts) => set({ image_urls, image_alts })}
+                  alts={formData.image_alts}
+                  onAltsChange={(image_alts) => set({ image_alts })}
+                  label="Images (Carousel)"
+                  maxImages={10}
+                />
 
                 <div className="flex items-center gap-2">
                   <Switch
                     id="in_stock"
                     checked={formData.in_stock}
-                    onCheckedChange={(checked) => setFormData({ ...formData, in_stock: checked })}
+                    onCheckedChange={(checked) => set({ in_stock: checked })}
                   />
                   <Label htmlFor="in_stock">In Stock</Label>
                 </div>
+
+                <SeoFields
+                  values={formData}
+                  onChange={set}
+                  path={`/part/${formData.slug}`}
+                  fallbackTitle={formData.name ? `${formData.name} | Mr.Bedmed Parts` : ''}
+                  fallbackDescription={formData.short_description || toPlainText(formData.description, 160)}
+                />
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>
                     Cancel
                   </Button>
-                  <Button type="submit">
-                    {editingPart ? 'Update Part' : 'Create Part'}
+                  <Button type="submit" disabled={saving}>
+                    {saving ? 'Saving…' : editingPart ? 'Update Part' : 'Create Part'}
                   </Button>
                 </div>
               </form>
@@ -507,13 +474,13 @@ export default function AdminParts() {
                   {part.image_urls && part.image_urls.length > 0 && (
                     <img
                       src={part.image_urls[0]}
-                      alt={part.name}
+                      alt={part.image_alts?.[0] || part.name}
                       className="w-16 h-16 object-cover rounded"
                     />
                   )}
                   <div className="flex-1">
                     <h3 className="font-semibold">{part.name}</h3>
-                    <p className="text-sm text-muted-foreground">{part.category} • /{part.slug || 'no-slug'}</p>
+                    <p className="text-sm text-muted-foreground">{part.category} • /part/{part.slug || 'no-slug'}</p>
                     <p className="text-primary font-medium">${part.price}</p>
                   </div>
                   <div className="flex items-center gap-2">

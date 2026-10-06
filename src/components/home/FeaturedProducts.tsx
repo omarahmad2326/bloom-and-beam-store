@@ -6,11 +6,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { toPlainText } from '@/lib/content';
 
 interface DBProduct {
   id: string;
   name: string;
   description: string | null;
+  short_description: string | null;
+  image_alt: string | null;
   price: number;
   original_price: number | null;
   image_url: string | null;
@@ -49,7 +52,7 @@ export function FeaturedProducts() {
       price: product.price,
       image: product.image_url || '/placeholder.svg',
       category: product.category,
-      description: product.description || '',
+      description: product.short_description || toPlainText(product.description, 200),
       features: product.features || [],
       rating: 4.5,
       reviews: 0,
@@ -120,7 +123,7 @@ export function FeaturedProducts() {
                   >
                     <img
                       src={product.image_url || '/placeholder.svg'}
-                      alt={product.name}
+                      alt={product.image_alt || product.name}
                       className="w-full h-full object-contain p-6 rotate-360-hover preserve-3d"
                     />
                   </div>
@@ -176,7 +179,7 @@ export function FeaturedProducts() {
                   </div>
 
                   <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                    {product.description}
+                    {product.short_description || toPlainText(product.description, 160)}
                   </p>
 
                   <div className="flex items-center gap-3">

@@ -14,50 +14,53 @@ import AdminLayout from './AdminLayout';
 import { useAuth } from '@/hooks/useAuth';
 import ImageUpload from '@/components/admin/ImageUpload';
 import MultiImageUpload from '@/components/admin/MultiImageUpload';
-import { generateSlug } from '@/lib/slugify';
-import BlogContentEditor from '@/components/admin/BlogContentEditor';
+import RichTextEditor from '@/components/admin/RichTextEditor';
+import SlugField, { validateSlugForSave, slugErrorFromDb } from '@/components/admin/SlugField';
+import SeoFields, { customSchemaError } from '@/components/admin/SeoFields';
+import ListEditor, { cleanList } from '@/components/admin/ListEditor';
+import { slugify } from '@/lib/slugify';
+import { toPlainText } from '@/lib/content';
+import type { Tables } from '@/integrations/supabase/types';
 
-interface Product {
-  id: string;
-  name: string;
-  slug: string | null;
-  description: string | null;
-  price: number;
-  original_price: number | null;
-  image_url: string | null;
-  image_urls: string[] | null;
-  category: string;
-  features: string[];
-  in_stock: boolean;
-  condition: string;
-  created_at: string;
-}
+type Product = Tables<'products'>;
 
 interface Category {
   id: string;
   name: string;
 }
 
+const emptyForm = {
+  name: '',
+  slug: '',
+  brand: '',
+  short_description: '',
+  description: '',
+  price: '',
+  original_price: '',
+  image_url: '',
+  image_alt: '',
+  image_urls: [] as string[],
+  image_alts: [] as string[],
+  category: '',
+  features: [] as string[],
+  in_stock: true,
+  condition: 'new',
+  meta_title: '',
+  meta_description: '',
+  custom_schema: '',
+};
+
 export default function AdminProducts() {
   const { isAdmin } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    slug: '',
-    description: '',
-    price: '',
-    original_price: '',
-    image_url: '',
-    image_urls: [] as string[],
-    category: '',
-    features: '',
-    in_stock: true,
-    condition: 'new'
-  });
+  const [slugError, setSlugError] = useState<string | null>(null);
+  const [formData, setFormData] = useState(emptyForm);
+  const set = (patch: Partial<typeof emptyForm>) => setFormData((f) => ({ ...f, ...patch }));
 
   useEffect(() => {
     fetchProducts();
@@ -92,101 +95,102 @@ export default function AdminProducts() {
   };
 
   const resetForm = () => {
-    setFormData({
-      name: '',
-      slug: '',
-      description: '',
-      price: '',
-      original_price: '',
-      image_url: '',
-      image_urls: [] as string[],
-      category: categories.length > 0 ? categories[0].name : '',
-      features: '',
-      in_stock: true,
-      condition: 'new'
-    });
+    setFormData({ ...emptyForm, category: categories.length > 0 ? categories[0].name : '' });
     setEditingProduct(null);
+    setSlugError(null);
   };
 
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
+    setSlugError(null);
     setFormData({
       name: product.name,
       slug: product.slug || '',
+      brand: product.brand || '',
+      short_description: product.short_description || '',
       description: product.description || '',
       price: product.price.toString(),
       original_price: product.original_price?.toString() || '',
       image_url: product.image_url || '',
+      image_alt: product.image_alt || '',
       image_urls: product.image_urls || [],
+      image_alts: product.image_alts || [],
       category: product.category,
-      features: product.features?.join(', ') || '',
+      features: product.features || [],
       in_stock: product.in_stock,
-      condition: product.condition || 'new'
+      condition: product.condition || 'new',
+      meta_title: product.meta_title || '',
+      meta_description: product.meta_description || '',
+      custom_schema: product.custom_schema || '',
     });
     setDialogOpen(true);
   };
 
-  const handleNameChange = (name: string) => {
-    const newData: typeof formData = { ...formData, name };
-    // Auto-generate slug only if slug is empty or was auto-generated from old name
-    if (!editingProduct && (!formData.slug || formData.slug === generateSlug(formData.name))) {
-      newData.slug = generateSlug(name);
-    }
-    setFormData(newData);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!isAdmin) {
       toast.error('You need admin privileges to manage products');
       return;
     }
 
-    const slug = formData.slug || generateSlug(formData.name);
+    const slug = slugify(formData.slug);
+    const schemaError = customSchemaError(formData.custom_schema);
+    if (schemaError) {
+      toast.error(`Custom schema: ${schemaError}`);
+      return;
+    }
+
+    setSaving(true);
+    const slugProblem = await validateSlugForSave('products', slug, {
+      excludeId: editingProduct?.id,
+      originalSlug: editingProduct?.slug,
+    });
+    if (slugProblem) {
+      setSlugError(slugProblem);
+      toast.error(slugProblem);
+      setSaving(false);
+      return;
+    }
 
     const productData = {
       name: formData.name,
       slug,
+      brand: formData.brand.trim() || null,
+      short_description: formData.short_description.trim() || null,
       description: formData.description || null,
       price: parseFloat(formData.price) || 0,
       original_price: formData.original_price ? parseFloat(formData.original_price) : null,
       image_url: formData.image_url || null,
+      image_alt: formData.image_alt.trim() || null,
       image_urls: formData.image_urls,
+      image_alts: formData.image_urls.map((_, i) => (formData.image_alts[i] || '').trim()),
       category: formData.category,
-      features: formData.features.split(',').map(f => f.trim()).filter(Boolean),
+      category_id: categories.find((c) => c.name === formData.category)?.id ?? null,
+      features: cleanList(formData.features),
       in_stock: formData.in_stock,
-      condition: formData.condition
+      condition: formData.condition,
+      meta_title: formData.meta_title.trim() || null,
+      meta_description: formData.meta_description.trim() || null,
+      custom_schema: formData.custom_schema.trim() || null,
     };
 
-    if (editingProduct) {
-      const { error } = await supabase
-        .from('products')
-        .update(productData)
-        .eq('id', editingProduct.id);
+    const { error } = editingProduct
+      ? await supabase.from('products').update(productData).eq('id', editingProduct.id)
+      : await supabase.from('products').insert([productData]);
+    setSaving(false);
 
-      if (error) {
-        toast.error('Failed to update product');
-      } else {
-        toast.success('Product updated successfully');
-        fetchProducts();
-        setDialogOpen(false);
-        resetForm();
-      }
-    } else {
-      const { error } = await supabase
-        .from('products')
-        .insert([productData]);
-
-      if (error) {
-        toast.error('Failed to create product');
-      } else {
-        toast.success('Product created successfully');
-        fetchProducts();
-        setDialogOpen(false);
-        resetForm();
-      }
+    if (error) {
+      const slugMsg = slugErrorFromDb(error);
+      if (slugMsg) setSlugError(slugMsg);
+      toast.error(slugMsg || `Failed to ${editingProduct ? 'update' : 'create'} product`);
+      return;
     }
+
+    toast.success(`Product ${editingProduct ? 'updated' : 'created'} successfully`);
+    fetchProducts();
+    setDialogOpen(false);
+    resetForm();
   };
 
   const handleDelete = async (id: string) => {
@@ -220,12 +224,12 @@ export default function AdminProducts() {
           </div>
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
-              <Button disabled={!isAdmin}>
+              <Button disabled={!isAdmin} onClick={resetForm}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Product
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
               </DialogHeader>
@@ -236,7 +240,7 @@ export default function AdminProducts() {
                     <Input
                       id="name"
                       value={formData.name}
-                      onChange={(e) => handleNameChange(e.target.value)}
+                      onChange={(e) => set({ name: e.target.value })}
                       required
                     />
                   </div>
@@ -244,9 +248,9 @@ export default function AdminProducts() {
                     <Label htmlFor="category">Category</Label>
                     <Select
                       value={formData.category}
-                      onValueChange={(value) => setFormData({ ...formData, category: value })}
+                      onValueChange={(value) => set({ category: value })}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="category">
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                       <SelectContent>
@@ -259,26 +263,61 @@ export default function AdminProducts() {
                     </Select>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="slug">URL Slug</Label>
-                  <Input
-                    id="slug"
-                    value={formData.slug}
-                    onChange={(e) => setFormData({ ...formData, slug: generateSlug(e.target.value) })}
-                    placeholder="auto-generated-from-name"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    URL preview: /products/{formData.slug || 'auto-generated'}
-                  </p>
+
+                <SlugField
+                  table="products"
+                  value={formData.slug}
+                  onChange={(slug) => { set({ slug }); setSlugError(null); }}
+                  title={formData.name}
+                  autoFill={!editingProduct}
+                  excludeId={editingProduct?.id}
+                  originalSlug={editingProduct?.slug}
+                  error={slugError}
+                />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="brand">Brand</Label>
+                    <Input
+                      id="brand"
+                      value={formData.brand}
+                      onChange={(e) => set({ brand: e.target.value })}
+                      placeholder="e.g. Stryker"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="condition">Condition</Label>
+                    <Select value={formData.condition} onValueChange={(value) => set({ condition: value })}>
+                      <SelectTrigger id="condition">
+                        <SelectValue placeholder="Select condition" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="new">New</SelectItem>
+                        <SelectItem value="refurbished">Refurbished</SelectItem>
+                        <SelectItem value="used">Used</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
+
                 <div className="space-y-2">
-                  <BlogContentEditor
-                    label="Description"
-                    value={formData.description}
-                    onChange={(val) => setFormData({ ...formData, description: val })}
-                    rows={8}
+                  <Label htmlFor="short_description">Short Description</Label>
+                  <Textarea
+                    id="short_description"
+                    value={formData.short_description}
+                    onChange={(e) => set({ short_description: e.target.value })}
+                    rows={2}
+                    placeholder="One or two sentences, used on product cards and in Google's product data"
                   />
                 </div>
+
+                <RichTextEditor
+                  label="Description"
+                  value={formData.description}
+                  onChange={(description) => set({ description })}
+                  imageBucket="product-images"
+                />
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="price">Price ($)</Label>
@@ -287,7 +326,7 @@ export default function AdminProducts() {
                       type="number"
                       step="0.01"
                       value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                      onChange={(e) => set({ price: e.target.value })}
                       required
                     />
                   </div>
@@ -298,64 +337,60 @@ export default function AdminProducts() {
                       type="number"
                       step="0.01"
                       value={formData.original_price}
-                      onChange={(e) => setFormData({ ...formData, original_price: e.target.value })}
+                      onChange={(e) => set({ original_price: e.target.value })}
                     />
                   </div>
                 </div>
+
                 <ImageUpload
                   bucket="product-images"
                   currentUrl={formData.image_url}
-                  onImageChange={(url) => setFormData({ ...formData, image_url: url })}
+                  onImageChange={(url) => set({ image_url: url })}
+                  alt={formData.image_alt}
+                  onAltChange={(image_alt) => set({ image_alt })}
                   label="Main Product Image"
                 />
                 <MultiImageUpload
                   bucket="product-images"
                   currentUrls={formData.image_urls}
-                  onImagesChange={(urls) => setFormData({ ...formData, image_urls: urls })}
+                  onImagesChange={(image_urls, image_alts) => set({ image_urls, image_alts })}
+                  alts={formData.image_alts}
+                  onAltsChange={(image_alts) => set({ image_alts })}
                   label="Additional Images (Gallery)"
                   maxImages={10}
                 />
-                <div className="space-y-2">
-                  <Label htmlFor="features">Features (comma separated)</Label>
-                  <Input
-                    id="features"
-                    value={formData.features}
-                    onChange={(e) => setFormData({ ...formData, features: e.target.value })}
-                    placeholder="Feature 1, Feature 2, Feature 3"
+
+                <ListEditor
+                  id="features"
+                  label="Features"
+                  items={formData.features}
+                  onChange={(features) => set({ features })}
+                  placeholder="e.g. 700 lb capacity"
+                />
+
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="in_stock"
+                    checked={formData.in_stock}
+                    onCheckedChange={(checked) => set({ in_stock: checked })}
                   />
+                  <Label htmlFor="in_stock">In Stock</Label>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="condition">Condition</Label>
-                    <Select
-                      value={formData.condition}
-                      onValueChange={(value) => setFormData({ ...formData, condition: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select condition" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="new">New</SelectItem>
-                        <SelectItem value="used">Used</SelectItem>
-                        <SelectItem value="refurbished">Refurbished</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex items-center gap-2 pt-8">
-                    <Switch
-                      id="in_stock"
-                      checked={formData.in_stock}
-                      onCheckedChange={(checked) => setFormData({ ...formData, in_stock: checked })}
-                    />
-                    <Label htmlFor="in_stock">In Stock</Label>
-                  </div>
-                </div>
+
+                <SeoFields
+                  values={formData}
+                  onChange={set}
+                  path={`/products/${formData.slug}`}
+                  fallbackTitle={formData.name ? `${formData.name} | Mr.Bedmed` : ''}
+                  fallbackDescription={formData.short_description || toPlainText(formData.description, 160)}
+                />
+
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>
                     Cancel
                   </Button>
-                  <Button type="submit">
-                    {editingProduct ? 'Update Product' : 'Create Product'}
+                  <Button type="submit" disabled={saving}>
+                    {saving ? 'Saving…' : editingProduct ? 'Update Product' : 'Create Product'}
                   </Button>
                 </div>
               </form>
@@ -379,23 +414,23 @@ export default function AdminProducts() {
                   {product.image_url && (
                     <img
                       src={product.image_url}
-                      alt={product.name}
+                      alt={product.image_alt || product.name}
                       className="w-16 h-16 object-cover rounded"
                     />
                   )}
                   <div className="flex-1">
                     <h3 className="font-semibold">{product.name}</h3>
-                    <p className="text-sm text-muted-foreground">{product.category} • /{product.slug || 'no-slug'}</p>
+                    <p className="text-sm text-muted-foreground">{product.category} • /products/{product.slug || 'no-slug'}</p>
                     <p className="text-primary font-medium">${product.price}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`px-2 py-1 text-xs rounded ${product.in_stock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                       {product.in_stock ? 'In Stock' : 'Out of Stock'}
                     </span>
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(product)} disabled={!isAdmin}>
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(product)} disabled={!isAdmin} aria-label={`Edit ${product.name}`}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(product.id)} disabled={!isAdmin}>
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(product.id)} disabled={!isAdmin} aria-label={`Delete ${product.name}`}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>

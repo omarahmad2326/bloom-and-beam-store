@@ -1,12 +1,22 @@
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
+import { RedirectOrFallback } from "@/components/RedirectOrFallback";
 
-const NotFound = () => {
+const NotFoundContent = () => {
   const location = useLocation();
 
   useEffect(() => {
     console.error("404 Error: User attempted to access non-existent route:", location.pathname);
   }, [location.pathname]);
+
+  useEffect(() => {
+    // Keep soft-404s out of the index.
+    const meta = document.createElement("meta");
+    meta.name = "robots";
+    meta.content = "noindex";
+    document.head.appendChild(meta);
+    return () => meta.remove();
+  }, []);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted">
@@ -20,5 +30,7 @@ const NotFound = () => {
     </div>
   );
 };
+
+const NotFound = () => <RedirectOrFallback fallback={<NotFoundContent />} />;
 
 export default NotFound;

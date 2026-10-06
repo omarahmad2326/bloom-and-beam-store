@@ -7,13 +7,16 @@ import { Upload, X, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ImageUploadProps {
-  bucket: 'product-images' | 'blog-images' | 'site-images';
+  bucket: 'product-images' | 'blog-images' | 'site-images' | 'parts-images';
   currentUrl: string;
   onImageChange: (url: string) => void;
   label?: string;
+  /** When provided, an ALT text input is shown for the image. */
+  alt?: string;
+  onAltChange?: (alt: string) => void;
 }
 
-export default function ImageUpload({ bucket, currentUrl, onImageChange, label = 'Image' }: ImageUploadProps) {
+export default function ImageUpload({ bucket, currentUrl, onImageChange, label = 'Image', alt, onAltChange }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string>(currentUrl);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -61,9 +64,9 @@ export default function ImageUpload({ bucket, currentUrl, onImageChange, label =
       setPreview(publicUrl);
       onImageChange(publicUrl);
       toast.success('Image uploaded successfully');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Upload error:', error);
-      toast.error(error.message || 'Failed to upload image');
+      toast.error((error as Error).message || 'Failed to upload image');
     } finally {
       setUploading(false);
     }
@@ -90,7 +93,7 @@ export default function ImageUpload({ bucket, currentUrl, onImageChange, label =
         <div className="relative w-full h-40 rounded-lg overflow-hidden border border-border bg-muted">
           <img
             src={preview}
-            alt="Preview"
+            alt={alt || 'Preview'}
             className="w-full h-full object-cover"
             onError={() => setPreview('')}
           />
@@ -146,6 +149,21 @@ export default function ImageUpload({ bucket, currentUrl, onImageChange, label =
           placeholder="https://example.com/image.jpg"
         />
       </div>
+
+      {onAltChange && (
+        <div className="space-y-1">
+          <Label htmlFor={`${bucket}-alt`} className="text-xs">ALT text</Label>
+          <Input
+            id={`${bucket}-alt`}
+            value={alt || ''}
+            onChange={(e) => onAltChange(e.target.value)}
+            placeholder="Describe the image for screen readers and Google Images"
+          />
+          {preview && !alt?.trim() && (
+            <p className="text-xs text-amber-700">Add ALT text so this image is accessible and indexable.</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

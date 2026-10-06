@@ -1,9 +1,11 @@
 import { Layout } from '@/components/layout/Layout';
 import { SEOHead } from '@/components/seo/SEOHead';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export default function Terms() {
   return (
     <Layout>
+      <BreadcrumbSchema items={[{ name: 'Terms of Service', path: '/terms' }]} />
       <SEOHead title="Terms of Service | Mr.Bedmed" description="Terms of Service for Mr. Bed Med — governing your use of our website and services." />
       <div className="container py-16 max-w-3xl mx-auto prose prose-neutral dark:prose-invert">
         <h1>Terms of Service for Mr. Bed Med</h1>

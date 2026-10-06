@@ -21,13 +21,16 @@ export type Database = {
           category: string
           content: string
           created_at: string
+          custom_schema: string | null
           excerpt: string | null
           id: string
+          image_alt: string | null
           image_url: string | null
           meta_description: string | null
           meta_keywords: string | null
           meta_title: string | null
           published: boolean
+          published_at: string | null
           read_time: string | null
           slug: string | null
           title: string
@@ -39,13 +42,16 @@ export type Database = {
           category?: string
           content: string
           created_at?: string
+          custom_schema?: string | null
           excerpt?: string | null
           id?: string
+          image_alt?: string | null
           image_url?: string | null
           meta_description?: string | null
           meta_keywords?: string | null
           meta_title?: string | null
           published?: boolean
+          published_at?: string | null
           read_time?: string | null
           slug?: string | null
           title: string
@@ -57,13 +63,16 @@ export type Database = {
           category?: string
           content?: string
           created_at?: string
+          custom_schema?: string | null
           excerpt?: string | null
           id?: string
+          image_alt?: string | null
           image_url?: string | null
           meta_description?: string | null
           meta_keywords?: string | null
           meta_title?: string | null
           published?: boolean
+          published_at?: string | null
           read_time?: string | null
           slug?: string | null
           title?: string
@@ -73,34 +82,70 @@ export type Database = {
       }
       categories: {
         Row: {
+          benefits: string[]
           created_at: string
+          cta_text: string | null
+          cta_title: string | null
+          custom_schema: string | null
           description: string | null
+          faqs: Json
           id: string
+          ideal_for: string[]
+          image_alt: string | null
           image_url: string | null
+          intro_html: string | null
+          key_features: string[]
+          meta_description: string | null
+          meta_title: string | null
           name: string
           slug: string
           sort_order: number | null
           updated_at: string
+          why_choose: string[]
         }
         Insert: {
+          benefits?: string[]
           created_at?: string
+          cta_text?: string | null
+          cta_title?: string | null
+          custom_schema?: string | null
           description?: string | null
+          faqs?: Json
           id?: string
+          ideal_for?: string[]
+          image_alt?: string | null
           image_url?: string | null
+          intro_html?: string | null
+          key_features?: string[]
+          meta_description?: string | null
+          meta_title?: string | null
           name: string
           slug: string
           sort_order?: number | null
           updated_at?: string
+          why_choose?: string[]
         }
         Update: {
+          benefits?: string[]
           created_at?: string
+          cta_text?: string | null
+          cta_title?: string | null
+          custom_schema?: string | null
           description?: string | null
+          faqs?: Json
           id?: string
+          ideal_for?: string[]
+          image_alt?: string | null
           image_url?: string | null
+          intro_html?: string | null
+          key_features?: string[]
+          meta_description?: string | null
+          meta_title?: string | null
           name?: string
           slug?: string
           sort_order?: number | null
           updated_at?: string
+          why_choose?: string[]
         }
         Relationships: []
       }
@@ -286,16 +331,21 @@ export type Database = {
           category: string
           condition: string
           created_at: string
+          custom_schema: string | null
           description: string | null
           id: string
+          image_alts: string[]
           image_urls: string[] | null
           in_stock: boolean
           make: string | null
+          meta_description: string | null
+          meta_title: string | null
           model: string | null
           name: string
           oem_no: string | null
           part_no: string | null
           price: number
+          short_description: string | null
           sku: string | null
           slug: string | null
           sort_order: number | null
@@ -306,16 +356,21 @@ export type Database = {
           category?: string
           condition?: string
           created_at?: string
+          custom_schema?: string | null
           description?: string | null
           id?: string
+          image_alts?: string[]
           image_urls?: string[] | null
           in_stock?: boolean
           make?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
           model?: string | null
           name: string
           oem_no?: string | null
           part_no?: string | null
           price?: number
+          short_description?: string | null
           sku?: string | null
           slug?: string | null
           sort_order?: number | null
@@ -326,16 +381,21 @@ export type Database = {
           category?: string
           condition?: string
           created_at?: string
+          custom_schema?: string | null
           description?: string | null
           id?: string
+          image_alts?: string[]
           image_urls?: string[] | null
           in_stock?: boolean
           make?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
           model?: string | null
           name?: string
           oem_no?: string | null
           part_no?: string | null
           price?: number
+          short_description?: string | null
           sku?: string | null
           slug?: string | null
           sort_order?: number | null
@@ -345,13 +405,17 @@ export type Database = {
       }
       products: {
         Row: {
+          brand: string | null
           category: string
           category_id: string | null
           condition: string
           created_at: string
+          custom_schema: string | null
           description: string | null
           features: string[] | null
           id: string
+          image_alt: string | null
+          image_alts: string[]
           image_url: string | null
           image_urls: string[] | null
           in_stock: boolean
@@ -360,17 +424,22 @@ export type Database = {
           name: string
           original_price: number | null
           price: number
+          short_description: string | null
           slug: string | null
           updated_at: string
         }
         Insert: {
+          brand?: string | null
           category?: string
           category_id?: string | null
           condition?: string
           created_at?: string
+          custom_schema?: string | null
           description?: string | null
           features?: string[] | null
           id?: string
+          image_alt?: string | null
+          image_alts?: string[]
           image_url?: string | null
           image_urls?: string[] | null
           in_stock?: boolean
@@ -379,17 +448,22 @@ export type Database = {
           name: string
           original_price?: number | null
           price?: number
+          short_description?: string | null
           slug?: string | null
           updated_at?: string
         }
         Update: {
+          brand?: string | null
           category?: string
           category_id?: string | null
           condition?: string
           created_at?: string
+          custom_schema?: string | null
           description?: string | null
           features?: string[] | null
           id?: string
+          image_alt?: string | null
+          image_alts?: string[]
           image_url?: string | null
           image_urls?: string[] | null
           in_stock?: boolean
@@ -398,6 +472,7 @@ export type Database = {
           name?: string
           original_price?: number | null
           price?: number
+          short_description?: string | null
           slug?: string | null
           updated_at?: string
         }
@@ -438,14 +513,51 @@ export type Database = {
         }
         Relationships: []
       }
-      services: {
+      redirects: {
         Row: {
           created_at: string
+          from_path: string
+          id: string
+          source: string
+          status_code: number
+          to_path: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          from_path: string
+          id?: string
+          source?: string
+          status_code?: number
+          to_path: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          from_path?: string
+          id?: string
+          source?: string
+          status_code?: number
+          to_path?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      services: {
+        Row: {
+          areas_served: string[]
+          created_at: string
+          custom_schema: string | null
           features: string[]
           hero_title: string
           icon: string
           id: string
+          image_alt: string | null
+          image_url: string | null
+          meta_description: string | null
+          meta_title: string | null
           overview: string[]
+          overview_html: string | null
           published: boolean
           short_desc: string
           slug: string
@@ -455,12 +567,19 @@ export type Database = {
           why_choose_title: string
         }
         Insert: {
+          areas_served?: string[]
           created_at?: string
+          custom_schema?: string | null
           features?: string[]
           hero_title: string
           icon?: string
           id?: string
+          image_alt?: string | null
+          image_url?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
           overview?: string[]
+          overview_html?: string | null
           published?: boolean
           short_desc: string
           slug: string
@@ -470,12 +589,19 @@ export type Database = {
           why_choose_title?: string
         }
         Update: {
+          areas_served?: string[]
           created_at?: string
+          custom_schema?: string | null
           features?: string[]
           hero_title?: string
           icon?: string
           id?: string
+          image_alt?: string | null
+          image_url?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
           overview?: string[]
+          overview_html?: string | null
           published?: boolean
           short_desc?: string
           slug?: string

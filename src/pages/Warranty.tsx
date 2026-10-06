@@ -1,9 +1,11 @@
 import { Layout } from '@/components/layout/Layout';
 import { SEOHead } from '@/components/seo/SEOHead';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export default function Warranty() {
   return (
     <Layout>
+      <BreadcrumbSchema items={[{ name: 'Warranty', path: '/warranty' }]} />
       <SEOHead title="Warranty Information | Mr.Bedmed" description="Warranty Information for Mr. Bed Med products — coverage, claims, and support details." />
       <div className="container py-16 max-w-3xl mx-auto prose prose-neutral dark:prose-invert">
         <h1>Warranty Information for Mr. Bed Med Products</h1>

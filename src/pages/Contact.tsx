@@ -8,6 +8,7 @@ import { Phone, Mail, MapPin, Clock, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useContactInfo } from '@/hooks/useContactInfo';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 const Contact = () => {
   const { toast } = useToast();
@@ -60,6 +61,7 @@ const Contact = () => {
 
   return (
     <Layout>
+      <BreadcrumbSchema items={[{ name: 'Contact Us', path: '/contact-us' }]} />
       <section className="py-16 md:py-24">
         <div className="container">
           <div className="text-center mb-16">

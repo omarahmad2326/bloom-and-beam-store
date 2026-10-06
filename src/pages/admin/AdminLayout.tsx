@@ -16,7 +16,8 @@ import {
   HelpCircle,
   MessageSquare,
   LayoutGrid,
-  Phone
+  Phone,
+  CornerUpRight
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -94,6 +95,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { path: '/admin/messages', icon: MessageSquare, label: 'Messages', badge: unreadMessagesCount },
     { path: '/admin/settings', icon: Settings, label: 'Site Settings' },
     { path: '/admin/contact-settings', icon: Phone, label: 'Contact Info' },
+    { path: '/admin/redirects', icon: CornerUpRight, label: 'Redirects' },
   ];
 
   const handleSignOut = async () => {

@@ -1,9 +1,11 @@
 import { Layout } from '@/components/layout/Layout';
 import { SEOHead } from '@/components/seo/SEOHead';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export default function Privacy() {
   return (
     <Layout>
+      <BreadcrumbSchema items={[{ name: 'Privacy Policy', path: '/privacy' }]} />
       <SEOHead title="Privacy Policy | Mr.Bedmed" description="Privacy Policy for Mr. Bed Med — how we collect, use, and protect your personal information." />
       <div className="container py-16 max-w-3xl mx-auto prose prose-neutral dark:prose-invert">
         <h1>Privacy Policy for Mr. Bed Med</h1>

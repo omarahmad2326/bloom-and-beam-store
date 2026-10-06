@@ -5,6 +5,8 @@ import { Calendar, Clock, User, ArrowRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { SEOHead } from '@/components/seo/SEOHead';
+import { toPlainText } from '@/lib/content';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 interface BlogPost {
   id: string;
@@ -13,6 +15,7 @@ interface BlogPost {
   excerpt: string | null;
   content: string;
   image_url: string | null;
+  image_alt?: string | null;
   category: string;
   author: string;
   read_time: string | null;
@@ -47,6 +50,7 @@ const Blog = () => {
   if (loading) {
     return (
       <Layout>
+        <BreadcrumbSchema items={[{ name: 'Blog', path: '/blog' }]} />
         <div className="container py-24 text-center">Loading...</div>
       </Layout>
     );
@@ -54,6 +58,7 @@ const Blog = () => {
 
   return (
     <Layout>
+      <BreadcrumbSchema items={[{ name: 'Blog', path: '/blog' }]} />
       <SEOHead
         title="Mr.Bedmed Blog - Medical Equipment Insights"
         description="Expert insights, maintenance tips, and industry news for healthcare professionals"
@@ -93,7 +98,7 @@ const Blog = () => {
                       {featuredPost.image_url ? (
                         <img
                           src={featuredPost.image_url}
-                          alt={featuredPost.title}
+                          alt={featuredPost.image_alt || featuredPost.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (
@@ -110,7 +115,7 @@ const Blog = () => {
                         {featuredPost.title}
                       </h3>
                       <p className="text-muted-foreground mb-6 line-clamp-3">
-                        {featuredPost.excerpt || featuredPost.content.substring(0, 150)}
+                        {featuredPost.excerpt || toPlainText(featuredPost.content, 150)}
                       </p>
                       <div className="flex items-center gap-6 text-sm text-muted-foreground mb-6">
                         <span className="flex items-center gap-2">
@@ -156,7 +161,7 @@ const Blog = () => {
                         {post.image_url ? (
                           <img
                             src={post.image_url}
-                            alt={post.title}
+                            alt={post.image_alt || post.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                           />
                         ) : (
@@ -173,7 +178,7 @@ const Blog = () => {
                           {post.title}
                         </h3>
                         <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
-                          {post.excerpt || post.content.substring(0, 100)}
+                          {post.excerpt || toPlainText(post.content, 100)}
                         </p>
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">

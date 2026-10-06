@@ -12,6 +12,15 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, GripVertical } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import { useAuth } from '@/hooks/useAuth';
+import ImageUpload from '@/components/admin/ImageUpload';
+import RichTextEditor from '@/components/admin/RichTextEditor';
+import SlugField, { validateSlugForSave, slugErrorFromDb } from '@/components/admin/SlugField';
+import SeoFields, { customSchemaError } from '@/components/admin/SeoFields';
+import ListEditor, { cleanList } from '@/components/admin/ListEditor';
+import { slugify } from '@/lib/slugify';
+import type { Tables } from '@/integrations/supabase/types';
+
+type Service = Tables<'services'>;
 
 const iconOptions = [
   { value: 'ClipboardCheck', label: 'Clipboard Check' },
@@ -28,39 +37,41 @@ const iconOptions = [
   { value: 'Heart', label: 'Heart' },
 ];
 
-interface Service {
-  id: string;
-  slug: string;
-  icon: string;
-  title: string;
-  short_desc: string;
-  hero_title: string;
-  overview: string[];
-  why_choose_title: string;
-  features: string[];
-  sort_order: number;
-  published: boolean;
-  created_at: string;
-}
+const emptyForm = {
+  slug: '',
+  icon: 'ClipboardCheck',
+  title: '',
+  short_desc: '',
+  hero_title: '',
+  overview_html: '',
+  why_choose_title: 'Why Choose Our Services?',
+  features: [] as string[],
+  areas_served: [] as string[],
+  image_url: '',
+  image_alt: '',
+  sort_order: 0,
+  published: true,
+  meta_title: '',
+  meta_description: '',
+  custom_schema: '',
+};
+
+/** Legacy services stored the overview as an array of plain paragraphs. */
+const legacyOverviewHtml = (paragraphs: string[]) =>
+  paragraphs
+    .map((p) => `<p>${p.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`)
+    .join('');
 
 export default function AdminServices() {
   const { isAdmin } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
-  const [formData, setFormData] = useState({
-    slug: '',
-    icon: 'ClipboardCheck',
-    title: '',
-    short_desc: '',
-    hero_title: '',
-    overview: '',
-    why_choose_title: 'Why Choose Our Services?',
-    features: '',
-    sort_order: 0,
-    published: true
-  });
+  const [slugError, setSlugError] = useState<string | null>(null);
+  const [formData, setFormData] = useState(emptyForm);
+  const set = (patch: Partial<typeof emptyForm>) => setFormData((f) => ({ ...f, ...patch }));
 
   useEffect(() => {
     fetchServices();
@@ -81,95 +92,98 @@ export default function AdminServices() {
   };
 
   const resetForm = () => {
-    setFormData({
-      slug: '',
-      icon: 'ClipboardCheck',
-      title: '',
-      short_desc: '',
-      hero_title: '',
-      overview: '',
-      why_choose_title: 'Why Choose Our Services?',
-      features: '',
-      sort_order: services.length + 1,
-      published: true
-    });
+    setFormData({ ...emptyForm, sort_order: services.length + 1 });
     setEditingService(null);
-  };
-
-  const generateSlug = (title: string) => {
-    return title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
+    setSlugError(null);
   };
 
   const handleEdit = (service: Service) => {
     setEditingService(service);
+    setSlugError(null);
     setFormData({
       slug: service.slug,
       icon: service.icon,
       title: service.title,
       short_desc: service.short_desc,
       hero_title: service.hero_title,
-      overview: service.overview.join('\n\n'),
+      overview_html: service.overview_html || legacyOverviewHtml(service.overview || []),
       why_choose_title: service.why_choose_title,
-      features: service.features.join(', '),
-      sort_order: service.sort_order,
-      published: service.published
+      features: service.features || [],
+      areas_served: service.areas_served || [],
+      image_url: service.image_url || '',
+      image_alt: service.image_alt || '',
+      sort_order: service.sort_order ?? 0,
+      published: service.published,
+      meta_title: service.meta_title || '',
+      meta_description: service.meta_description || '',
+      custom_schema: service.custom_schema || '',
     });
     setDialogOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!isAdmin) {
       toast.error('You need admin privileges to manage services');
       return;
     }
 
+    const slug = slugify(formData.slug);
+    const schemaError = customSchemaError(formData.custom_schema);
+    if (schemaError) {
+      toast.error(`Custom schema: ${schemaError}`);
+      return;
+    }
+
+    setSaving(true);
+    const slugProblem = await validateSlugForSave('services', slug, {
+      excludeId: editingService?.id,
+      originalSlug: editingService?.slug,
+    });
+    if (slugProblem) {
+      setSlugError(slugProblem);
+      toast.error(slugProblem);
+      setSaving(false);
+      return;
+    }
+
     const serviceData = {
-      slug: formData.slug || generateSlug(formData.title),
+      slug,
       icon: formData.icon,
       title: formData.title,
       short_desc: formData.short_desc,
       hero_title: formData.hero_title || formData.title,
-      overview: formData.overview.split('\n\n').filter(Boolean),
+      overview_html: formData.overview_html || null,
       why_choose_title: formData.why_choose_title,
-      features: formData.features.split(',').map(f => f.trim()).filter(Boolean),
+      features: cleanList(formData.features),
+      areas_served: cleanList(formData.areas_served),
+      image_url: formData.image_url || null,
+      image_alt: formData.image_alt.trim() || null,
       sort_order: formData.sort_order,
-      published: formData.published
+      published: formData.published,
+      meta_title: formData.meta_title.trim() || null,
+      meta_description: formData.meta_description.trim() || null,
+      custom_schema: formData.custom_schema.trim() || null,
     };
 
-    if (editingService) {
-      const { error } = await supabase
-        .from('services')
-        .update(serviceData)
-        .eq('id', editingService.id);
+    const { error } = editingService
+      ? await supabase.from('services').update(serviceData).eq('id', editingService.id)
+      : await supabase.from('services').insert([serviceData]);
+    setSaving(false);
 
-      if (error) {
-        toast.error('Failed to update service');
-      } else {
-        toast.success('Service updated successfully');
-        fetchServices();
-        setDialogOpen(false);
-        resetForm();
-      }
-    } else {
-      const { error } = await supabase
-        .from('services')
-        .insert([serviceData]);
-
-      if (error) {
-        toast.error('Failed to create service');
-        console.error(error);
-      } else {
-        toast.success('Service created successfully');
-        fetchServices();
-        setDialogOpen(false);
-        resetForm();
-      }
+    if (error) {
+      console.error(error);
+      const slugMsg = slugErrorFromDb(error);
+      if (slugMsg) setSlugError(slugMsg);
+      toast.error(slugMsg || `Failed to ${editingService ? 'update' : 'create'} service`);
+      return;
     }
+
+    toast.success(`Service ${editingService ? 'updated' : 'created'} successfully`);
+    fetchServices();
+    setDialogOpen(false);
+    resetForm();
   };
 
   const handleDelete = async (id: string) => {
@@ -203,45 +217,43 @@ export default function AdminServices() {
           </div>
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
-              <Button disabled={!isAdmin}>
+              <Button disabled={!isAdmin} onClick={resetForm}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Service
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingService ? 'Edit Service' : 'Add New Service'}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Service Title</Label>
-                    <Input
-                      id="title"
-                      value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="slug">URL Slug</Label>
-                    <Input
-                      id="slug"
-                      value={formData.slug}
-                      onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                      placeholder="auto-generated-from-title"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="title">Service Title</Label>
+                  <Input
+                    id="title"
+                    value={formData.title}
+                    onChange={(e) => set({ title: e.target.value })}
+                    required
+                  />
                 </div>
-                
+
+                <SlugField
+                  table="services"
+                  value={formData.slug}
+                  onChange={(slug) => { set({ slug }); setSlugError(null); }}
+                  title={formData.title}
+                  autoFill={!editingService}
+                  excludeId={editingService?.id}
+                  originalSlug={editingService?.slug}
+                  isPublished={editingService?.published ?? false}
+                  error={slugError}
+                />
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="icon">Icon</Label>
-                    <Select
-                      value={formData.icon}
-                      onValueChange={(value) => setFormData({ ...formData, icon: value })}
-                    >
-                      <SelectTrigger>
+                    <Select value={formData.icon} onValueChange={(value) => set({ icon: value })}>
+                      <SelectTrigger id="icon">
                         <SelectValue placeholder="Select an icon" />
                       </SelectTrigger>
                       <SelectContent>
@@ -259,7 +271,7 @@ export default function AdminServices() {
                       id="sort_order"
                       type="number"
                       value={formData.sort_order}
-                      onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })}
+                      onChange={(e) => set({ sort_order: parseInt(e.target.value) || 0 })}
                     />
                   </div>
                 </div>
@@ -269,7 +281,7 @@ export default function AdminServices() {
                   <Textarea
                     id="short_desc"
                     value={formData.short_desc}
-                    onChange={(e) => setFormData({ ...formData, short_desc: e.target.value })}
+                    onChange={(e) => set({ short_desc: e.target.value })}
                     rows={2}
                     required
                   />
@@ -280,59 +292,76 @@ export default function AdminServices() {
                   <Input
                     id="hero_title"
                     value={formData.hero_title}
-                    onChange={(e) => setFormData({ ...formData, hero_title: e.target.value })}
+                    onChange={(e) => set({ hero_title: e.target.value })}
                     placeholder="Defaults to service title"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="overview">Overview (separate paragraphs with blank lines)</Label>
-                  <Textarea
-                    id="overview"
-                    value={formData.overview}
-                    onChange={(e) => setFormData({ ...formData, overview: e.target.value })}
-                    rows={5}
-                    placeholder="First paragraph...
+                <ImageUpload
+                  bucket="site-images"
+                  currentUrl={formData.image_url}
+                  onImageChange={(image_url) => set({ image_url })}
+                  alt={formData.image_alt}
+                  onAltChange={(image_alt) => set({ image_alt })}
+                  label="Hero Image (optional)"
+                />
 
-Second paragraph..."
-                  />
-                </div>
+                <RichTextEditor
+                  label="Service Overview"
+                  value={formData.overview_html}
+                  onChange={(overview_html) => set({ overview_html })}
+                  imageBucket="site-images"
+                />
 
                 <div className="space-y-2">
                   <Label htmlFor="why_choose_title">Why Choose Section Title</Label>
                   <Input
                     id="why_choose_title"
                     value={formData.why_choose_title}
-                    onChange={(e) => setFormData({ ...formData, why_choose_title: e.target.value })}
+                    onChange={(e) => set({ why_choose_title: e.target.value })}
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="features">Features (comma separated)</Label>
-                  <Textarea
-                    id="features"
-                    value={formData.features}
-                    onChange={(e) => setFormData({ ...formData, features: e.target.value })}
-                    rows={2}
-                    placeholder="Feature 1, Feature 2, Feature 3"
-                  />
-                </div>
+                <ListEditor
+                  id="features"
+                  label="Why Choose Points"
+                  items={formData.features}
+                  onChange={(features) => set({ features })}
+                  placeholder="e.g. Quick Turnaround Time"
+                />
+
+                <ListEditor
+                  id="areas_served"
+                  label="Cities Served"
+                  items={formData.areas_served}
+                  onChange={(areas_served) => set({ areas_served })}
+                  placeholder="e.g. Dallas"
+                  help="Used for the service's areaServed in Google structured data."
+                />
 
                 <div className="flex items-center gap-2">
                   <Switch
                     id="published"
                     checked={formData.published}
-                    onCheckedChange={(checked) => setFormData({ ...formData, published: checked })}
+                    onCheckedChange={(checked) => set({ published: checked })}
                   />
                   <Label htmlFor="published">Published</Label>
                 </div>
+
+                <SeoFields
+                  values={formData}
+                  onChange={set}
+                  path={`/services/${formData.slug}`}
+                  fallbackTitle={formData.title ? `${formData.title} | Mr.Bedmed Services` : ''}
+                  fallbackDescription={formData.short_desc}
+                />
 
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>
                     Cancel
                   </Button>
-                  <Button type="submit">
-                    {editingService ? 'Update Service' : 'Create Service'}
+                  <Button type="submit" disabled={saving}>
+                    {saving ? 'Saving…' : editingService ? 'Update Service' : 'Create Service'}
                   </Button>
                 </div>
               </form>
@@ -359,16 +388,16 @@ Second paragraph..."
                   </div>
                   <div className="flex-1">
                     <h3 className="font-semibold">{service.title}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-1">{service.short_desc}</p>
+                    <p className="text-sm text-muted-foreground line-clamp-1">/services/{service.slug} • {service.short_desc}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`px-2 py-1 text-xs rounded ${service.published ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
                       {service.published ? 'Published' : 'Draft'}
                     </span>
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(service)} disabled={!isAdmin}>
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(service)} disabled={!isAdmin} aria-label={`Edit ${service.title}`}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(service.id)} disabled={!isAdmin}>
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(service.id)} disabled={!isAdmin} aria-label={`Delete ${service.title}`}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>

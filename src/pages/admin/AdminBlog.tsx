@@ -12,49 +12,43 @@ import { Plus, Pencil, Trash2 } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import { useAuth } from '@/hooks/useAuth';
 import ImageUpload from '@/components/admin/ImageUpload';
-import BlogContentEditor from '@/components/admin/BlogContentEditor';
+import RichTextEditor from '@/components/admin/RichTextEditor';
+import SlugField, { validateSlugForSave, slugErrorFromDb } from '@/components/admin/SlugField';
+import SeoFields, { customSchemaError } from '@/components/admin/SeoFields';
+import { slugify } from '@/lib/slugify';
+import { isContentEmpty } from '@/lib/content';
+import type { Tables } from '@/integrations/supabase/types';
 
-interface BlogPost {
-  id: string;
-  title: string;
-  slug: string | null;
-  excerpt: string | null;
-  content: string;
-  image_url: string | null;
-  category: string;
-  author: string;
-  published: boolean;
-  created_at: string;
-  meta_title: string | null;
-  meta_description: string | null;
-  meta_keywords: string | null;
-  canonical_url: string | null;
-  read_time: string | null;
-}
+type BlogPost = Tables<'blog_posts'>;
 
-const generateSlug = (title: string) => title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+const emptyForm = {
+  title: '',
+  slug: '',
+  excerpt: '',
+  content: '',
+  image_url: '',
+  image_alt: '',
+  category: 'Industry News',
+  author: 'Mr.Bedmed Team',
+  published: false,
+  meta_title: '',
+  meta_description: '',
+  meta_keywords: '',
+  canonical_url: '',
+  read_time: '5 min read',
+  custom_schema: '',
+};
 
 export default function AdminBlog() {
   const { isAdmin } = useAuth();
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
-  const [formData, setFormData] = useState({
-    title: '',
-    slug: '',
-    excerpt: '',
-    content: '',
-    image_url: '',
-    category: 'Industry News',
-    author: 'Mr.Bedmed Team',
-    published: false,
-    meta_title: '',
-    meta_description: '',
-    meta_keywords: '',
-    canonical_url: '',
-    read_time: '5 min read'
-  });
+  const [slugError, setSlugError] = useState<string | null>(null);
+  const [formData, setFormData] = useState(emptyForm);
+  const set = (patch: Partial<typeof emptyForm>) => setFormData((f) => ({ ...f, ...patch }));
 
   useEffect(() => {
     fetchPosts();
@@ -75,32 +69,21 @@ export default function AdminBlog() {
   };
 
   const resetForm = () => {
-    setFormData({
-      title: '',
-      slug: '',
-      excerpt: '',
-      content: '',
-      image_url: '',
-      category: 'Industry News',
-      author: 'Mr.Bedmed Team',
-      published: false,
-      meta_title: '',
-      meta_description: '',
-      meta_keywords: '',
-      canonical_url: '',
-      read_time: '5 min read'
-    });
+    setFormData(emptyForm);
     setEditingPost(null);
+    setSlugError(null);
   };
 
   const handleEdit = (post: BlogPost) => {
     setEditingPost(post);
+    setSlugError(null);
     setFormData({
       title: post.title,
       slug: post.slug || '',
       excerpt: post.excerpt || '',
       content: post.content,
       image_url: post.image_url || '',
+      image_alt: post.image_alt || '',
       category: post.category,
       author: post.author,
       published: post.published,
@@ -108,25 +91,51 @@ export default function AdminBlog() {
       meta_description: post.meta_description || '',
       meta_keywords: post.meta_keywords || '',
       canonical_url: post.canonical_url || '',
-      read_time: post.read_time || '5 min read'
+      read_time: post.read_time || '5 min read',
+      custom_schema: post.custom_schema || '',
     });
     setDialogOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!isAdmin) {
       toast.error('You need admin privileges to manage blog posts');
       return;
     }
 
+    if (isContentEmpty(formData.content)) {
+      toast.error('Content is required');
+      return;
+    }
+
+    const slug = slugify(formData.slug);
+    const schemaError = customSchemaError(formData.custom_schema);
+    if (schemaError) {
+      toast.error(`Custom schema: ${schemaError}`);
+      return;
+    }
+
+    setSaving(true);
+    const slugProblem = await validateSlugForSave('blog_posts', slug, {
+      excludeId: editingPost?.id,
+      originalSlug: editingPost?.slug,
+    });
+    if (slugProblem) {
+      setSlugError(slugProblem);
+      toast.error(slugProblem);
+      setSaving(false);
+      return;
+    }
+
     const postData = {
       title: formData.title,
-      slug: formData.slug || generateSlug(formData.title),
+      slug,
       excerpt: formData.excerpt || null,
       content: formData.content,
       image_url: formData.image_url || null,
+      image_alt: formData.image_alt.trim() || null,
       category: formData.category,
       author: formData.author,
       published: formData.published,
@@ -134,37 +143,26 @@ export default function AdminBlog() {
       meta_description: formData.meta_description || null,
       meta_keywords: formData.meta_keywords || null,
       canonical_url: formData.canonical_url || null,
-      read_time: formData.read_time || null
+      read_time: formData.read_time || null,
+      custom_schema: formData.custom_schema.trim() || null,
     };
 
-    if (editingPost) {
-      const { error } = await supabase
-        .from('blog_posts')
-        .update(postData)
-        .eq('id', editingPost.id);
+    const { error } = editingPost
+      ? await supabase.from('blog_posts').update(postData).eq('id', editingPost.id)
+      : await supabase.from('blog_posts').insert([postData]);
+    setSaving(false);
 
-      if (error) {
-        toast.error('Failed to update blog post');
-      } else {
-        toast.success('Blog post updated successfully');
-        fetchPosts();
-        setDialogOpen(false);
-        resetForm();
-      }
-    } else {
-      const { error } = await supabase
-        .from('blog_posts')
-        .insert([postData]);
-
-      if (error) {
-        toast.error('Failed to create blog post');
-      } else {
-        toast.success('Blog post created successfully');
-        fetchPosts();
-        setDialogOpen(false);
-        resetForm();
-      }
+    if (error) {
+      const slugMsg = slugErrorFromDb(error);
+      if (slugMsg) setSlugError(slugMsg);
+      toast.error(slugMsg || `Failed to ${editingPost ? 'update' : 'create'} blog post`);
+      return;
     }
+
+    toast.success(`Blog post ${editingPost ? 'updated' : 'created'} successfully`);
+    fetchPosts();
+    setDialogOpen(false);
+    resetForm();
   };
 
   const handleDelete = async (id: string) => {
@@ -206,12 +204,12 @@ export default function AdminBlog() {
           </div>
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
-              <Button disabled={!isAdmin}>
+              <Button disabled={!isAdmin} onClick={resetForm}>
                 <Plus className="h-4 w-4 mr-2" />
                 New Post
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingPost ? 'Edit Blog Post' : 'Create New Post'}</DialogTitle>
               </DialogHeader>
@@ -221,24 +219,37 @@ export default function AdminBlog() {
                   <Input
                     id="title"
                     value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    onChange={(e) => set({ title: e.target.value })}
                     required
                   />
                 </div>
+                <SlugField
+                  table="blog_posts"
+                  value={formData.slug}
+                  onChange={(slug) => { set({ slug }); setSlugError(null); }}
+                  title={formData.title}
+                  autoFill={!editingPost}
+                  excludeId={editingPost?.id}
+                  originalSlug={editingPost?.slug}
+                  isPublished={editingPost?.published ?? false}
+                  error={slugError}
+                />
                 <div className="space-y-2">
                   <Label htmlFor="excerpt">Excerpt</Label>
                   <Textarea
                     id="excerpt"
                     value={formData.excerpt}
-                    onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
+                    onChange={(e) => set({ excerpt: e.target.value })}
                     rows={2}
                     placeholder="Brief summary of the post..."
                   />
                 </div>
-                <BlogContentEditor
+                <RichTextEditor
+                  label="Content"
                   value={formData.content}
-                  onChange={(content) => setFormData({ ...formData, content })}
-                  rows={12}
+                  onChange={(content) => set({ content })}
+                  imageBucket="blog-images"
+                  minHeight={320}
                 />
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -246,7 +257,7 @@ export default function AdminBlog() {
                     <Input
                       id="category"
                       value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      onChange={(e) => set({ category: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">
@@ -254,63 +265,40 @@ export default function AdminBlog() {
                     <Input
                       id="author"
                       value={formData.author}
-                      onChange={(e) => setFormData({ ...formData, author: e.target.value })}
+                      onChange={(e) => set({ author: e.target.value })}
                     />
                   </div>
                 </div>
                 <ImageUpload
                   bucket="blog-images"
                   currentUrl={formData.image_url}
-                  onImageChange={(url) => setFormData({ ...formData, image_url: url })}
+                  onImageChange={(image_url) => set({ image_url })}
+                  alt={formData.image_alt}
+                  onAltChange={(image_alt) => set({ image_alt })}
                   label="Featured Image"
                 />
-                <div className="space-y-2">
-                  <Label htmlFor="meta_title">
-                    Meta Title <span className="text-destructive">*</span>
-                    <span className={`ml-2 text-xs ${formData.meta_title.length > 60 ? 'text-destructive' : 'text-muted-foreground'}`}>
-                      {formData.meta_title.length}/60
-                    </span>
-                  </Label>
-                  <Input
-                    id="meta_title"
-                    value={formData.meta_title}
-                    onChange={(e) => setFormData({ ...formData, meta_title: e.target.value.slice(0, 60) })}
-                    maxLength={60}
-                    required
-                    placeholder="SEO title (max 60 characters)"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="meta_description">
-                    Meta Description <span className="text-destructive">*</span>
-                    <span className={`ml-2 text-xs ${formData.meta_description.length > 160 ? 'text-destructive' : 'text-muted-foreground'}`}>
-                      {formData.meta_description.length}/160
-                    </span>
-                  </Label>
-                  <Textarea
-                    id="meta_description"
-                    value={formData.meta_description}
-                    onChange={(e) => setFormData({ ...formData, meta_description: e.target.value.slice(0, 160) })}
-                    maxLength={160}
-                    required
-                    rows={2}
-                    placeholder="SEO description (max 160 characters)"
-                  />
-                </div>
                 <div className="flex items-center gap-2">
                   <Switch
                     id="published"
                     checked={formData.published}
-                    onCheckedChange={(checked) => setFormData({ ...formData, published: checked })}
+                    onCheckedChange={(checked) => set({ published: checked })}
                   />
                   <Label htmlFor="published">Published</Label>
                 </div>
+                <SeoFields
+                  values={formData}
+                  onChange={set}
+                  path={`/blog/${formData.slug}`}
+                  fallbackTitle={formData.title}
+                  fallbackDescription={formData.excerpt}
+                  required
+                />
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>
                     Cancel
                   </Button>
-                  <Button type="submit">
-                    {editingPost ? 'Update Post' : 'Create Post'}
+                  <Button type="submit" disabled={saving}>
+                    {saving ? 'Saving…' : editingPost ? 'Update Post' : 'Create Post'}
                   </Button>
                 </div>
               </form>
@@ -334,24 +322,24 @@ export default function AdminBlog() {
                   {post.image_url && (
                     <img
                       src={post.image_url}
-                      alt={post.title}
+                      alt={post.image_alt || post.title}
                       className="w-20 h-14 object-cover rounded"
                     />
                   )}
                   <div className="flex-1">
                     <h3 className="font-semibold">{post.title}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {post.category} • {post.author} • {formatDate(post.created_at)}
+                      {post.category} • {post.author} • {formatDate(post.published_at || post.created_at)} • /blog/{post.slug || post.id}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`px-2 py-1 text-xs rounded ${post.published ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
                       {post.published ? 'Published' : 'Draft'}
                     </span>
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(post)} disabled={!isAdmin}>
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(post)} disabled={!isAdmin} aria-label={`Edit ${post.title}`}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(post.id)} disabled={!isAdmin}>
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(post.id)} disabled={!isAdmin} aria-label={`Delete ${post.title}`}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>

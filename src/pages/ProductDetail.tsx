@@ -9,21 +9,17 @@ import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { ShoppingCart, Minus, Plus, Check, ArrowLeft, ChevronLeft, ChevronRight, Loader2, X, Maximize2, MessageSquareQuote } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import MarkdownContent from '@/components/MarkdownContent';
+import RichContent from '@/components/RichContent';
+import { SEOHead } from '@/components/seo/SEOHead';
+import { JsonLd, CustomJsonLd } from '@/components/seo/JsonLd';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { RedirectOrFallback } from '@/components/RedirectOrFallback';
+import { productSchema } from '@/lib/schema';
+import { absoluteUrl } from '@/lib/site';
+import { toPlainText } from '@/lib/content';
+import type { Tables } from '@/integrations/supabase/types';
 
-interface Product {
-  id: string;
-  name: string;
-  description: string | null;
-  price: number;
-  original_price: number | null;
-  image_url: string | null;
-  image_urls: string[] | null;
-  category: string;
-  features: string[] | null;
-  in_stock: boolean;
-  condition: string;
-}
+type Product = Tables<'products'>;
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -64,7 +60,7 @@ const ProductDetail = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, image_url, price, category, slug')
+        .select('id, name, image_url, image_alt, price, category, slug')
         .eq('category', product!.category)
         .neq('id', id)
         .limit(4);
@@ -80,6 +76,12 @@ const ProductDetail = () => {
     product?.image_url,
     ...(product?.image_urls || [])
   ].filter(Boolean) as string[];
+
+  // ALT text per image, aligned with allImages.
+  const imageAlts = [
+    ...(product?.image_url ? [product.image_alt || product.name] : []),
+    ...(product?.image_urls || []).map((_, i) => product?.image_alts?.[i] || `${product?.name} view ${i + 2}`),
+  ];
 
   const nextImage = useCallback(() => {
     setCurrentImageIndex((prev) => (prev + 1) % Math.max(1, allImages.length));
@@ -138,7 +140,7 @@ const ProductDetail = () => {
       price: product.price,
       image: product.image_url || '/placeholder.svg',
       category: product.category,
-      description: product.description || '',
+      description: product.short_description || toPlainText(product.description, 200),
       features: product.features || [],
       rating: 4.5,
       reviews: 0,
@@ -159,17 +161,45 @@ const ProductDetail = () => {
 
   if (!product) {
     return (
-      <Layout>
-        <div className="container py-20 text-center">
-          <h2 className="text-2xl font-bold mb-4">Product not found</h2>
-          <Link to="/" className="text-primary hover:underline">Return to Home</Link>
-        </div>
-      </Layout>
+      <RedirectOrFallback
+        fallback={
+          <Layout>
+            <div className="container py-20 text-center">
+              <h2 className="text-2xl font-bold mb-4">Product not found</h2>
+              <Link to="/" className="text-primary hover:underline">Return to Home</Link>
+            </div>
+          </Layout>
+        }
+      />
     );
   }
 
+  const path = `/products/${product.slug || product.id}`;
+  const summary = product.short_description || toPlainText(product.description, 160);
+
   return (
     <Layout>
+      <SEOHead
+        title={product.meta_title || `${product.name} | Mr.Bedmed`}
+        description={product.meta_description || summary || undefined}
+        canonicalUrl={absoluteUrl(path)}
+        ogImage={absoluteUrl(product.image_url)}
+      />
+      <JsonLd
+        id="product"
+        data={productSchema({
+          name: product.name,
+          path,
+          image: product.image_url || product.image_urls?.[0],
+          description: product.short_description || product.description,
+          brand: product.brand,
+          price: product.price,
+          inStock: product.in_stock,
+          condition: product.condition,
+        })}
+      />
+      <BreadcrumbSchema items={[{ name: 'Products', path: '/products' }, { name: product.name, path }]} />
+      <CustomJsonLd value={product.custom_schema} />
       <section className="py-12 md:py-20">
         <div className="container">
           <Link to="/products" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary mb-8 transition-colors">
@@ -185,8 +215,8 @@ const ProductDetail = () => {
               >
                 {allImages.length > 0 ? (
                   <img 
-                    src={allImages[currentImageIndex]} 
-                    alt={product.name} 
+                    src={allImages[currentImageIndex]}
+                    alt={imageAlts[currentImageIndex] || product.name}
                     className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105" 
                   />
                 ) : (
@@ -244,7 +274,7 @@ const ProductDetail = () => {
                     >
                       <img 
                         src={img} 
-                        alt={`${product.name} view ${index + 1}`}
+                        alt={imageAlts[index] || `${product.name} view ${index + 1}`}
                         className="w-full h-full object-cover"
                       />
                     </button>
@@ -274,6 +304,11 @@ const ProductDetail = () => {
                 )}>
                   {product.in_stock ? "In Stock" : "Out of Stock"}
                 </div>
+                {product.brand && (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-muted text-foreground">
+                    {product.brand}
+                  </div>
+                )}
                 <div className={cn(
                   "inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium",
                   product.condition === 'new' && "bg-blue-100 text-blue-700",
@@ -284,8 +319,12 @@ const ProductDetail = () => {
                 </div>
               </div>
 
+              {product.short_description && (
+                <p className="text-lg text-muted-foreground">{product.short_description}</p>
+              )}
+
               {product.description && (
-                <MarkdownContent content={product.description} className="max-w-none" />
+                <RichContent content={product.description} className="max-w-none" />
               )}
 
               {product.features && product.features.length > 0 && (
@@ -356,7 +395,7 @@ const ProductDetail = () => {
                     <div className="bg-muted rounded-xl overflow-hidden aspect-square mb-3 relative perspective-1000">
                       <img 
                         src={relProduct.image_url || '/placeholder.svg'} 
-                        alt={relProduct.name}
+                        alt={relProduct.image_alt || relProduct.name}
                         className="w-full h-full object-contain p-4 rotate-360-hover preserve-3d"
                       />
                     </div>
@@ -418,7 +457,7 @@ const ProductDetail = () => {
           >
             <img
               src={allImages[currentImageIndex] || '/placeholder.svg'}
-              alt={product?.name}
+              alt={imageAlts[currentImageIndex] || product?.name}
               className="max-w-full max-h-[80vh] object-contain mx-auto animate-scale-in"
             />
           </div>
@@ -442,7 +481,7 @@ const ProductDetail = () => {
                 >
                   <img 
                     src={img} 
-                    alt={`View ${index + 1}`}
+                    alt={imageAlts[index] || `View ${index + 1}`}
                     className="w-full h-full object-cover"
                   />
                 </button>

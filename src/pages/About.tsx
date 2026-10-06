@@ -1,8 +1,10 @@
 import { Layout } from '@/components/layout/Layout';
 import { Award, Users, Target, Heart } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 const About = () => (
   <Layout>
+    <BreadcrumbSchema items={[{ name: 'About Us', path: '/about-us' }]} />
     <section className="py-16 md:py-24">
       <div className="container">
         <div className="text-center mb-16">

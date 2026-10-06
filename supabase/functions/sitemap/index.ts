@@ -6,6 +6,9 @@ const corsHeaders = {
   'Content-Type': 'application/xml',
 }
 
+const escapeXml = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;')
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -17,20 +20,17 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const baseUrl = req.headers.get('origin') || 'https://mrbedmed.com'
+    // Always the canonical domain, so preview/staging origins never leak into the sitemap.
+    const baseUrl = (Deno.env.get('SITE_URL') || 'https://mrbedmed.com').replace(/\/+$/, '')
 
-    // Fetch published blog posts
-    const { data: posts } = await supabase
-      .from('blog_posts')
-      .select('slug, id, updated_at')
-      .eq('published', true)
+    const [posts, products, parts, services, categories] = await Promise.all([
+      supabase.from('blog_posts').select('slug, id, updated_at').eq('published', true),
+      supabase.from('products').select('id, slug, updated_at'),
+      supabase.from('parts').select('id, slug, updated_at'),
+      supabase.from('services').select('slug, updated_at').eq('published', true),
+      supabase.from('categories').select('slug, updated_at'),
+    ])
 
-    // Fetch products
-    const { data: products } = await supabase
-      .from('products')
-      .select('id, slug, updated_at')
-
-    // Static pages
     const staticPages = [
       { loc: '/', priority: '1.0', changefreq: 'weekly' },
       { loc: '/products', priority: '0.9', changefreq: 'daily' },
@@ -40,72 +40,34 @@ Deno.serve(async (req) => {
       { loc: '/contact-us', priority: '0.6', changefreq: 'monthly' },
       { loc: '/faq', priority: '0.7', changefreq: 'weekly' },
       { loc: '/blog', priority: '0.8', changefreq: 'daily' },
-      { loc: '/category/er-stretcher', priority: '0.8', changefreq: 'weekly' },
-      { loc: '/category/ems-stretcher', priority: '0.8', changefreq: 'weekly' },
-      { loc: '/category/ICU-bed', priority: '0.8', changefreq: 'weekly' },
-      { loc: '/category/patient-recliner', priority: '0.8', changefreq: 'weekly' },
+      { loc: '/warranty', priority: '0.4', changefreq: 'yearly' },
+      { loc: '/privacy', priority: '0.3', changefreq: 'yearly' },
+      { loc: '/terms', priority: '0.3', changefreq: 'yearly' },
     ]
 
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`
-
-    // Add static pages
-    for (const page of staticPages) {
-      xml += `
-  <url>
-    <loc>${baseUrl}${page.loc}</loc>
-    <changefreq>${page.changefreq}</changefreq>
-    <priority>${page.priority}</priority>
-  </url>`
+    const entries: string[] = []
+    const add = (path: string, changefreq: string, priority: string, updatedAt?: string) => {
+      entries.push(`  <url>
+    <loc>${escapeXml(baseUrl + path)}</loc>${updatedAt ? `
+    <lastmod>${new Date(updatedAt).toISOString()}</lastmod>` : ''}
+    <changefreq>${changefreq}</changefreq>
+    <priority>${priority}</priority>
+  </url>`)
     }
 
-    // Add blog posts
-    if (posts) {
-      for (const post of posts) {
-        xml += `
-  <url>
-    <loc>${baseUrl}/blog/${post.slug || post.id}</loc>
-    <lastmod>${new Date(post.updated_at).toISOString()}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>`
-      }
-    }
+    for (const page of staticPages) add(page.loc, page.changefreq, page.priority)
+    for (const c of categories.data ?? []) add(`/category/${c.slug}`, 'weekly', '0.8', c.updated_at)
+    for (const s of services.data ?? []) add(`/services/${s.slug}`, 'monthly', '0.7', s.updated_at)
+    for (const p of products.data ?? []) add(`/products/${p.slug || p.id}`, 'weekly', '0.8', p.updated_at)
+    for (const p of parts.data ?? []) add(`/part/${p.slug || p.id}`, 'weekly', '0.7', p.updated_at)
+    for (const p of posts.data ?? []) add(`/blog/${p.slug || p.id}`, 'monthly', '0.7', p.updated_at)
 
-    // Add products
-    if (products) {
-      for (const product of products) {
-        xml += `
-  <url>
-    <loc>${baseUrl}/products/${product.slug || product.id}</loc>
-    <lastmod>${new Date(product.updated_at).toISOString()}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>`
-      }
-    }
-
-    // Fetch parts
-    const { data: parts } = await supabase
-      .from('parts')
-      .select('id, slug, updated_at')
-
-    if (parts) {
-      for (const part of parts) {
-        xml += `
-  <url>
-    <loc>${baseUrl}/part/${part.slug || part.id}</loc>
-    <lastmod>${new Date(part.updated_at).toISOString()}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>`
-      }
-    }
-
-    xml += `
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${entries.join('\n')}
 </urlset>`
 
-    console.log('Sitemap generated successfully')
+    console.log(`Sitemap generated with ${entries.length} URLs`)
 
     return new Response(xml, { headers: corsHeaders })
   } catch (error) {

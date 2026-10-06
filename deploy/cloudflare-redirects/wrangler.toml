@@ -1,0 +1,15 @@
+name = "mrbedmed-redirects"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+# Run in front of the site. Requires mrbedmed.com DNS to be proxied by Cloudflare (orange cloud).
+routes = [
+  { pattern = "mrbedmed.com/*", zone_name = "mrbedmed.com" },
+  { pattern = "www.mrbedmed.com/*", zone_name = "mrbedmed.com" },
+]
+
+[vars]
+# Same values as VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY in the app's .env.
+# The anon key is public (it ships in the website's JavaScript); redirects are read-only via RLS.
+SUPABASE_URL = "https://xgzjppyfkfjnwdrxpnpz.supabase.co"
+SUPABASE_ANON_KEY = "REPLACE_WITH_PUBLISHABLE_KEY"

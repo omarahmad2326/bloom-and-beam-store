@@ -7,36 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Save, Phone, Facebook, Twitter, Linkedin, Instagram } from 'lucide-react';
+import { Loader2, Save, Phone, Facebook, Twitter, Linkedin, Instagram, MapPin } from 'lucide-react';
 import type { Json } from '@/integrations/supabase/types';
-
-interface ContactInfo {
-  phone: string;
-  email: string;
-  address_line1: string;
-  address_line2: string;
-  working_hours: string;
-  social_links: {
-    facebook: string;
-    twitter: string;
-    linkedin: string;
-    instagram: string;
-  };
-}
-
-const defaultContactInfo: ContactInfo = {
-  phone: '+1 469 767 8853',
-  email: 'service@mbmts.com',
-  address_line1: '555 N. 5th St, Suite 109',
-  address_line2: 'Garland, TX 75040',
-  working_hours: 'Mon–Fri: 8 AM – 5 PM CST',
-  social_links: {
-    facebook: '',
-    twitter: '',
-    linkedin: '',
-    instagram: ''
-  }
-};
+import { defaultContactInfo, postalAddressOf, type ContactInfo } from '@/hooks/useContactInfo';
+import ImageUpload from '@/components/admin/ImageUpload';
 
 export default function AdminContactSettings() {
   const { isAdmin } = useAuth();
@@ -59,7 +33,7 @@ export default function AdminContactSettings() {
 
       if (error && error.code !== 'PGRST116') throw error;
       if (data?.value) {
-        setContactInfo(data.value as unknown as ContactInfo);
+        setContactInfo({ ...defaultContactInfo, ...(data.value as unknown as ContactInfo) });
       }
     } catch (error) {
       console.error('Error fetching contact info:', error);
@@ -193,6 +167,57 @@ export default function AdminContactSettings() {
                   value={contactInfo.working_hours}
                   onChange={(e) => updateField('working_hours', e.target.value)}
                   placeholder="Mon–Fri: 9 AM – 5 PM"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" /> Business Address &amp; Logo (for Google)
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Used in the LocalBusiness / Organization structured data on service and blog pages.
+                Empty fields fall back to the address lines above.
+              </p>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <Label htmlFor="street_address">Street Address</Label>
+                <Input
+                  id="street_address"
+                  value={contactInfo.street_address || ''}
+                  onChange={(e) => updateField('street_address', e.target.value)}
+                  placeholder={postalAddressOf({ ...contactInfo, street_address: '' }).streetAddress || '555 N. 5th St, Suite 109 B'}
+                />
+              </div>
+              <div>
+                <Label htmlFor="city">City</Label>
+                <Input id="city" value={contactInfo.city || ''} onChange={(e) => updateField('city', e.target.value)}
+                  placeholder={postalAddressOf({ ...contactInfo, city: '' }).addressLocality || 'Garland'} />
+              </div>
+              <div>
+                <Label htmlFor="region">State</Label>
+                <Input id="region" value={contactInfo.region || ''} onChange={(e) => updateField('region', e.target.value.toUpperCase())}
+                  placeholder={postalAddressOf({ ...contactInfo, region: '' }).addressRegion || 'TX'} maxLength={2} />
+              </div>
+              <div>
+                <Label htmlFor="postal_code">ZIP Code</Label>
+                <Input id="postal_code" value={contactInfo.postal_code || ''} onChange={(e) => updateField('postal_code', e.target.value)}
+                  placeholder={postalAddressOf({ ...contactInfo, postal_code: '' }).postalCode || '75040'} />
+              </div>
+              <div>
+                <Label htmlFor="country">Country Code</Label>
+                <Input id="country" value={contactInfo.country || ''} onChange={(e) => updateField('country', e.target.value.toUpperCase())}
+                  placeholder="US" maxLength={2} />
+              </div>
+              <div className="md:col-span-2">
+                <ImageUpload
+                  bucket="site-images"
+                  currentUrl={contactInfo.logo_url || ''}
+                  onImageChange={(url) => updateField('logo_url', url)}
+                  label="Logo (publisher logo for blog posts; defaults to the favicon)"
                 />
               </div>
             </CardContent>

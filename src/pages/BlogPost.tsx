@@ -7,175 +7,17 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { SEOHead } from '@/components/seo/SEOHead';
-import { BlogArticleSchema } from '@/components/seo/BlogArticleSchema';
+import { JsonLd, CustomJsonLd } from '@/components/seo/JsonLd';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { RedirectOrFallback } from '@/components/RedirectOrFallback';
+import RichContent from '@/components/RichContent';
+import { useContactInfo } from '@/hooks/useContactInfo';
+import { blogPostingSchema } from '@/lib/schema';
+import { absoluteUrl } from '@/lib/site';
+import { toPlainText } from '@/lib/content';
+import type { Tables } from '@/integrations/supabase/types';
 
-interface BlogPost {
-  id: string;
-  title: string;
-  slug: string | null;
-  excerpt: string | null;
-  content: string;
-  image_url: string | null;
-  category: string;
-  author: string;
-  read_time: string | null;
-  meta_title: string | null;
-  meta_description: string | null;
-  meta_keywords: string | null;
-  canonical_url: string | null;
-  created_at: string;
-  updated_at: string;
-  published: boolean;
-}
-
-// Parse inline markdown (bold, italic, links)
-const parseInlineMarkdown = (text: string): React.ReactNode[] => {
-  const parts: React.ReactNode[] = [];
-  let remaining = text;
-  let key = 0;
-
-  while (remaining.length > 0) {
-    // Check for links [text](url)
-    const linkMatch = remaining.match(/^\[([^\]]+)\]\(([^)]+)\)/);
-    if (linkMatch) {
-      const [fullMatch, linkText, url] = linkMatch;
-      const isInternal = url.startsWith('/') || url.startsWith('#');
-      if (isInternal) {
-        parts.push(
-          <Link key={key++} to={url} className="text-primary hover:underline font-medium">
-            {linkText}
-          </Link>
-        );
-      } else {
-        parts.push(
-          <a key={key++} href={url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">
-            {linkText}
-          </a>
-        );
-      }
-      remaining = remaining.slice(fullMatch.length);
-      continue;
-    }
-
-    // Check for bold **text**
-    const boldMatch = remaining.match(/^\*\*([^*]+)\*\*/);
-    if (boldMatch) {
-      parts.push(<strong key={key++} className="font-bold text-foreground">{boldMatch[1]}</strong>);
-      remaining = remaining.slice(boldMatch[0].length);
-      continue;
-    }
-
-    // Check for italic *text*
-    const italicMatch = remaining.match(/^\*([^*]+)\*/);
-    if (italicMatch) {
-      parts.push(<em key={key++} className="italic">{italicMatch[1]}</em>);
-      remaining = remaining.slice(italicMatch[0].length);
-      continue;
-    }
-
-    // Find next special character
-    const nextSpecial = remaining.search(/[\[*]/);
-    if (nextSpecial === -1) {
-      parts.push(remaining);
-      break;
-    } else if (nextSpecial === 0) {
-      parts.push(remaining[0]);
-      remaining = remaining.slice(1);
-    } else {
-      parts.push(remaining.slice(0, nextSpecial));
-      remaining = remaining.slice(nextSpecial);
-    }
-  }
-
-  return parts;
-};
-
-// Render full markdown content
-const renderMarkdownContent = (content: string): React.ReactNode[] => {
-  const blocks = content.split('\n\n');
-  const elements: React.ReactNode[] = [];
-  let key = 0;
-
-  blocks.forEach((block) => {
-    const trimmedBlock = block.trim();
-    if (!trimmedBlock) return;
-
-    // H1
-    if (trimmedBlock.startsWith('# ')) {
-      elements.push(
-        <h2 key={key++} className="text-3xl font-bold text-foreground mt-10 mb-6">
-          {parseInlineMarkdown(trimmedBlock.replace(/^# /, ''))}
-        </h2>
-      );
-      return;
-    }
-
-    // H2
-    if (trimmedBlock.startsWith('## ')) {
-      elements.push(
-        <h2 key={key++} className="text-2xl font-bold text-foreground mt-8 mb-4">
-          {parseInlineMarkdown(trimmedBlock.replace(/^## /, ''))}
-        </h2>
-      );
-      return;
-    }
-
-    // H3
-    if (trimmedBlock.startsWith('### ')) {
-      elements.push(
-        <h3 key={key++} className="text-xl font-bold text-foreground mt-6 mb-3">
-          {parseInlineMarkdown(trimmedBlock.replace(/^### /, ''))}
-        </h3>
-      );
-      return;
-    }
-
-    // Blockquote
-    if (trimmedBlock.startsWith('> ')) {
-      elements.push(
-        <blockquote key={key++} className="border-l-4 border-primary pl-4 py-2 my-4 text-muted-foreground italic bg-muted/30 rounded-r">
-          {parseInlineMarkdown(trimmedBlock.replace(/^> /, ''))}
-        </blockquote>
-      );
-      return;
-    }
-
-    // Bullet list
-    if (trimmedBlock.startsWith('- ')) {
-      const items = trimmedBlock.split('\n').filter(item => item.trim().startsWith('- '));
-      elements.push(
-        <ul key={key++} className="list-disc list-inside space-y-2 text-muted-foreground mb-4 pl-4">
-          {items.map((item, i) => (
-            <li key={i}>{parseInlineMarkdown(item.replace(/^- /, ''))}</li>
-          ))}
-        </ul>
-      );
-      return;
-    }
-
-    // Numbered list
-    if (/^\d+\. /.test(trimmedBlock)) {
-      const items = trimmedBlock.split('\n').filter(item => /^\d+\. /.test(item.trim()));
-      elements.push(
-        <ol key={key++} className="list-decimal list-inside space-y-2 text-muted-foreground mb-4 pl-4">
-          {items.map((item, i) => (
-            <li key={i}>{parseInlineMarkdown(item.replace(/^\d+\. /, ''))}</li>
-          ))}
-        </ol>
-      );
-      return;
-    }
-
-    // Regular paragraph
-    elements.push(
-      <p key={key++} className="text-muted-foreground mb-4 leading-relaxed">
-        {parseInlineMarkdown(trimmedBlock)}
-      </p>
-    );
-  });
-
-  return elements;
-};
+type BlogPost = Tables<'blog_posts'>;
 
 const BlogPostPage = () => {
   const { id } = useParams();
@@ -183,6 +25,7 @@ const BlogPostPage = () => {
   const [relatedPosts, setRelatedPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const { contactInfo } = useContactInfo();
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -223,6 +66,8 @@ const BlogPostPage = () => {
       setLoading(false);
     };
 
+    setLoading(true);
+    setNotFound(false);
     fetchPost();
   }, [id]);
 
@@ -240,35 +85,44 @@ const BlogPostPage = () => {
   }
 
   if (notFound || !post) {
-    return <Navigate to="/blog" replace />;
+    return <RedirectOrFallback fallback={<Navigate to="/blog" replace />} />;
   }
 
-  const canonicalUrl = post.canonical_url || `${window.location.origin}/blog/${post.slug || post.id}`;
+  const path = `/blog/${post.slug || post.id}`;
+  const canonicalUrl = post.canonical_url || absoluteUrl(path)!;
+  const summary = post.excerpt || toPlainText(post.content, 160);
+  const publishedAt = post.published_at || post.created_at;
 
   return (
     <Layout>
       <SEOHead
         title={post.meta_title || post.title}
-        description={post.meta_description || post.excerpt || post.content.substring(0, 160)}
+        description={post.meta_description || summary}
         keywords={post.meta_keywords || undefined}
         canonicalUrl={canonicalUrl}
-        ogImage={post.image_url || undefined}
+        ogImage={absoluteUrl(post.image_url)}
         ogType="article"
         article={{
           author: post.author,
-          publishedTime: post.created_at,
+          publishedTime: publishedAt,
           modifiedTime: post.updated_at
         }}
       />
-      <BlogArticleSchema
-        title={post.title}
-        description={post.excerpt || post.content.substring(0, 160)}
-        author={post.author}
-        publishedTime={post.created_at}
-        modifiedTime={post.updated_at}
-        imageUrl={post.image_url || undefined}
-        url={canonicalUrl}
+      <JsonLd
+        id="article"
+        data={blogPostingSchema({
+          title: post.title,
+          path,
+          description: summary,
+          image: post.image_url,
+          author: post.author,
+          publishedAt,
+          modifiedAt: post.updated_at,
+          logoUrl: contactInfo.logo_url,
+        })}
       />
+      <BreadcrumbSchema items={[{ name: 'Blog', path: '/blog' }, { name: post.title, path }]} />
+      <CustomJsonLd value={post.custom_schema} />
 
       {/* Hero */}
       <section className="relative">
@@ -296,7 +150,7 @@ const BlogPostPage = () => {
               </span>
               <span className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
-                {new Date(post.created_at).toLocaleDateString('en-US', {
+                {new Date(publishedAt).toLocaleDateString('en-US', {
                   month: 'long',
                   day: 'numeric',
                   year: 'numeric',
@@ -317,7 +171,7 @@ const BlogPostPage = () => {
           <div className="max-w-4xl mx-auto">
             <img
               src={post.image_url}
-              alt={post.title}
+              alt={post.image_alt || post.title}
               title={post.title}
               loading="lazy"
               className="w-full aspect-video object-cover rounded-2xl shadow-xl"
@@ -330,8 +184,8 @@ const BlogPostPage = () => {
       <section className="py-12">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto">
-            <article className="prose prose-lg max-w-none">
-              {renderMarkdownContent(post.content)}
+            <article className="max-w-none text-lg">
+              <RichContent content={post.content} />
             </article>
 
             {/* Share */}
@@ -364,7 +218,7 @@ const BlogPostPage = () => {
                     {relatedPost.image_url ? (
                       <img
                         src={relatedPost.image_url}
-                        alt={relatedPost.title}
+                        alt={relatedPost.image_alt || relatedPost.title}
                         loading="lazy"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />

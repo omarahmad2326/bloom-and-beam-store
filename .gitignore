@@ -28,3 +28,5 @@ dist-ssr
 .env.*
 supabase/.temp/
 supabase/*.before-production-migration
+
+!.env.example

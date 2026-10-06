@@ -7,12 +7,16 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { SEOHead } from '@/components/seo/SEOHead';
+import { toPlainText } from '@/lib/content';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 interface Product {
   id: string;
   slug: string | null;
   name: string;
   description: string | null;
+  short_description: string | null;
+  image_alt: string | null;
   price: number;
   original_price: number | null;
   image_url: string | null;
@@ -114,6 +118,7 @@ const Products = () => {
 
   return (
     <Layout>
+      <BreadcrumbSchema items={[{ name: 'Products', path: '/products' }]} />
       <SEOHead
         title={isHospitalBedsFilter 
           ? "Hospital Beds & Medical Beds | Mr.Bedmed Products" 
@@ -196,7 +201,7 @@ const Products = () => {
                     id: product.id,
                     slug: product.slug || undefined,
                     name: product.name,
-                    description: product.description || '',
+                    description: product.short_description || toPlainText(product.description, 200),
                     price: product.price,
                     originalPrice: product.original_price || undefined,
                     image: product.image_url || '/placeholder.svg',
