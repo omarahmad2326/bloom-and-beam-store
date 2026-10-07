@@ -120,7 +120,8 @@ const EMAIL = /^[^@\s<>"',;]+@[^@\s<>"',;]+\.[^@\s<>"',;]+$/;
 
 /** A usable address from a setting: trims spaces/quotes, accepts "Name <a@b.co>"; '' if not an email. */
 export function cleanEmail(value: string | null | undefined): string {
-  const v = (value || '').trim().replace(/^["']+|["']+$/g, '').trim();
+  // Copy-pasted addresses often carry invisible characters (zero-width space, BOM, CR).
+  const v = (value || '').replace(/[​-‍⁠﻿\r]/g, '').trim().replace(/^["']+|["']+$/g, '').trim();
   const angle = /<([^>]+)>/.exec(v);
   const addr = (angle ? angle[1] : v).trim();
   return EMAIL.test(addr) ? addr : '';
