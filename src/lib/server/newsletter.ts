@@ -104,11 +104,19 @@ function toResend(email: OutgoingEmail, replyTo: string) {
 async function resend(path: string, body: unknown): Promise<{ ok: boolean; error?: string }> {
   const { apiKey } = newsletterConfig();
   if (!apiKey) return { ok: false, error: 'RESEND_API_KEY is not set on the server.' };
-  const res = await fetch(`${RESEND_URL}${path}`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${RESEND_URL}${path}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      // Never wait forever on a stalled connection (the campaign would stay "Sending…").
+      signal: AbortSignal.timeout(30_000),
+    });
+  } catch (e) {
+    const timedOut = e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError');
+    return { ok: false, error: timedOut ? 'Resend did not answer within 30 seconds.' : `Could not reach Resend: ${String(e)}` };
+  }
   if (res.ok) return { ok: true };
   const detail = await res.json().catch(() => null);
   return { ok: false, error: `Resend ${res.status}: ${detail?.message || detail?.name || res.statusText}` };

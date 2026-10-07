@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import {
   adminFromRequest,
   composeEmail,
@@ -68,9 +68,9 @@ export async function POST(req: Request) {
   }
   await db.from('newsletter_campaigns').update({ recipient_count: recipients.length }).eq('id', campaign.id);
 
-  // Keep sending after the response (long-running Node server under pm2).
+  // Send after the response has gone out (Next.js after(): the request is not held open).
   const emails = recipients.map((r) => composeEmail(campaign, r.email, r.token, contact));
-  void (async () => {
+  after(async () => {
     try {
       const result = await sendMany(emails, contact, async (sent, failed, error) => {
         await db.from('newsletter_campaigns').update({ sent_count: sent, failed_count: failed, last_error: error ?? null }).eq('id', campaign.id);
@@ -89,7 +89,7 @@ export async function POST(req: Request) {
       console.error('[newsletter] send failed:', e);
       await db.from('newsletter_campaigns').update({ status: 'failed', last_error: String(e) }).eq('id', campaign.id);
     }
-  })();
+  });
 
   return NextResponse.json({ ok: true, recipients: recipients.length }, { status: 202 });
 }

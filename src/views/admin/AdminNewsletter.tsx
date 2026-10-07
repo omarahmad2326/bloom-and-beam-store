@@ -65,6 +65,7 @@ export default function AdminNewsletter() {
   const [testing, setTesting] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [confirmSend, setConfirmSend] = useState(false);
+  const [sending, setSending] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Campaign | null>(null);
 
   const [filter, setFilter] = useState('');
@@ -128,6 +129,7 @@ export default function AdminNewsletter() {
   );
 
   const openEditor = (c: Campaign | null) => {
+    setConfirmSend(false);
     setEditing(c ?? ({ id: '', status: 'draft' } as Campaign));
     setSubject(c?.subject ?? '');
     setPreheader(c?.preheader ?? '');
@@ -165,15 +167,16 @@ export default function AdminNewsletter() {
   };
 
   const sendToAll = async () => {
-    setConfirmSend(false);
+    setSending(true);
     const id = await save(true);
-    if (!id) return;
-    const r = await callSend({ campaignId: id });
+    const r = id ? await callSend({ campaignId: id }) : { ok: false, error: undefined, recipients: 0 };
+    setSending(false);
+    setConfirmSend(false);
     if (!r.ok) {
-      toast.error(r.error || 'Could not start sending');
+      if (id) toast.error(r.error || 'Could not start sending');
       return;
     }
-    toast.success(`Sending to ${r.recipients} subscribers…`);
+    toast.success(`Sending to ${r.recipients} subscriber${r.recipients === 1 ? '' : 's'}…`);
     setEditing(null);
     load();
   };
@@ -421,10 +424,28 @@ export default function AdminNewsletter() {
                     <Button variant="outline" onClick={() => save()} disabled={saving || !isAdmin}>
                       {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save draft
                     </Button>
-                    <Button onClick={() => setConfirmSend(true)} disabled={!isAdmin || !subject.trim() || !content.trim() || subscribedCount === 0}>
-                      <Send className="h-4 w-4" /> Send to {subscribedCount} subscriber{subscribedCount === 1 ? '' : 's'}
-                    </Button>
+                    {!confirmSend && (
+                      <Button onClick={() => setConfirmSend(true)} disabled={!isAdmin || !subject.trim() || !content.trim() || subscribedCount === 0}>
+                        <Send className="h-4 w-4" /> Send to {subscribedCount} subscriber{subscribedCount === 1 ? '' : 's'}
+                      </Button>
+                    )}
                   </div>
+                  {/* Confirmation inside the editor: a second modal closing together with this one leaves the
+                      page unclickable (Radix Dialog bug), so no stacked AlertDialog here. */}
+                  {confirmSend && (
+                    <div role="alertdialog" aria-labelledby="nl-confirm-title" className="rounded-md border border-primary/30 bg-primary/5 p-4">
+                      <p id="nl-confirm-title" className="font-semibold">Send to {subscribedCount} subscriber{subscribedCount === 1 ? '' : 's'} now?</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        &ldquo;{subject}&rdquo; will be emailed now. This cannot be undone. Send yourself a test first if you have not.
+                      </p>
+                      <div className="mt-3 flex gap-2">
+                        <Button onClick={sendToAll} disabled={sending}>
+                          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Send now
+                        </Button>
+                        <Button variant="outline" onClick={() => setConfirmSend(false)} disabled={sending}>Cancel</Button>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -438,21 +459,6 @@ export default function AdminNewsletter() {
           <iframe title="Newsletter preview" srcDoc={preview} className="h-[70vh] w-full rounded border" />
         </DialogContent>
       </Dialog>
-
-      <AlertDialog open={confirmSend} onOpenChange={setConfirmSend}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Send to {subscribedCount} subscribers?</AlertDialogTitle>
-            <AlertDialogDescription>
-              &ldquo;{subject}&rdquo; will be emailed now. This cannot be undone. Send yourself a test first if you have not.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={sendToAll}>Send now</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
