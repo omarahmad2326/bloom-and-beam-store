@@ -49,7 +49,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(siteNavigationSchema) }} />
+        {/* Pretty-printed so it is easy to find in View Page Source (Ctrl+U). */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: `\n${JSON.stringify(siteNavigationSchema, null, 2)}\n` }}
+        />
       </head>
       <body>
         <Providers>{children}</Providers>
