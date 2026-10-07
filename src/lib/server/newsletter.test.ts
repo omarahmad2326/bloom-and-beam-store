@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { defaultContactInfo } from '@/lib/contactInfo';
-import { composeEmail, sendMany } from './newsletter';
+import { cleanEmail, composeEmail, replyToAddress, sendMany, sendOne } from './newsletter';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -55,6 +55,35 @@ describe('newsletter sending', () => {
     const done = sendMany(emails, defaultContactInfo);
     await vi.runAllTimersAsync();
     expect(await done).toEqual({ sent: 100, failed: 50, lastError: 'Resend 500: boom' });
+  });
+
+  it.each([
+    [' contact@mrbedmed.com ', 'contact@mrbedmed.com'],
+    ['"contact@mrbedmed.com"', 'contact@mrbedmed.com'],
+    ['Mr. Bedmed <contact@mrbedmed.com>', 'contact@mrbedmed.com'],
+    ['Mr. Bedmed', ''],
+    ['a@b.co, c@d.co', ''],
+    ['', ''],
+  ])('cleans reply-to %j → %j', (raw, clean) => {
+    expect(cleanEmail(raw)).toBe(clean);
+  });
+
+  it('an invalid NEWSLETTER_REPLY_TO falls back to Contact Info instead of failing the send', async () => {
+    vi.stubEnv('RESEND_API_KEY', 're_test');
+    vi.stubEnv('NEWSLETTER_REPLY_TO', 'Mr. Bedmed');
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const bodies: Record<string, unknown>[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
+      bodies.push(JSON.parse(String(init.body)));
+      return new Response('{}', { status: 200 });
+    }));
+    const contact = { ...defaultContactInfo, email: 'info@mrbedmed.com' };
+    expect(replyToAddress(contact)).toBe('info@mrbedmed.com');
+    await sendOne(composeEmail(campaign, 'a@b.co', undefined, contact), contact);
+    expect(bodies[0].reply_to).toBe('info@mrbedmed.com');
+
+    vi.stubEnv('NEWSLETTER_REPLY_TO', '');
+    expect(replyToAddress({ ...contact, email: 'not an email' })).toBe(''); // omitted, never sent invalid
   });
 
   it('does not call Resend without an API key', async () => {

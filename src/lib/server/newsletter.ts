@@ -116,9 +116,29 @@ async function resend(path: string, body: unknown): Promise<{ ok: boolean; error
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+const EMAIL = /^[^@\s<>"',;]+@[^@\s<>"',;]+\.[^@\s<>"',;]+$/;
+
+/** A usable address from a setting: trims spaces/quotes, accepts "Name <a@b.co>"; '' if not an email. */
+export function cleanEmail(value: string | null | undefined): string {
+  const v = (value || '').trim().replace(/^["']+|["']+$/g, '').trim();
+  const angle = /<([^>]+)>/.exec(v);
+  const addr = (angle ? angle[1] : v).trim();
+  return EMAIL.test(addr) ? addr : '';
+}
+
+/**
+ * Reply-to: NEWSLETTER_REPLY_TO, else the email in Dashboard → Contact Info. An invalid value is
+ * skipped (Resend rejects the whole send otherwise) and logged so it can be fixed.
+ */
+export function replyToAddress(contact?: ContactInfo): string {
+  const configured = newsletterConfig().replyTo;
+  const fromEnv = cleanEmail(configured);
+  if (configured && !fromEnv) console.error(`[newsletter] NEWSLETTER_REPLY_TO is not a valid email (${JSON.stringify(configured)}); using Contact Info instead`);
+  return fromEnv || cleanEmail(contact?.email);
+}
+
 export async function sendOne(email: OutgoingEmail, contact?: ContactInfo) {
-  const replyTo = newsletterConfig().replyTo || contact?.email || '';
-  return resend('/emails', toResend(email, replyTo));
+  return resend('/emails', toResend(email, replyToAddress(contact)));
 }
 
 /**
@@ -130,7 +150,7 @@ export async function sendMany(
   contact: ContactInfo,
   onProgress?: (sent: number, failed: number, error?: string) => Promise<void> | void,
 ) {
-  const replyTo = newsletterConfig().replyTo || contact.email || '';
+  const replyTo = replyToAddress(contact);
   let sent = 0;
   let failed = 0;
   let lastError: string | undefined;

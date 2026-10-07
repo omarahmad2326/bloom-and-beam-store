@@ -52,7 +52,13 @@ if [ -n "$DEFAULT_DOMAIN" ] && ! printf '%s' "$VERIFIED" | grep -q "^OK ${FROM_A
 fi
 read -rp "   Sender name [Mr.Bedmed]: " FROM_NAME
 FROM_NAME="${FROM_NAME:-Mr.Bedmed}"
-read -rp "   Replies go to (empty = email from Dashboard → Contact Info): " REPLY_TO
+while :; do
+  read -rp "   Replies go to (an email address; empty = email from Dashboard → Contact Info): " REPLY_TO
+  REPLY_TO="$(printf '%s' "$REPLY_TO" | tr -d "[:space:]\"'")"
+  [ -z "$REPLY_TO" ] && break
+  printf '%s' "$REPLY_TO" | grep -qE '^[^@<>,;]+@[^@<>,;]+\.[^@<>,;]+$' && break
+  printf '\033[1;33m   "%s" is not an email address; type just the address (e.g. contact@mrbedmed.com) or press Enter.\033[0m\n' "$REPLY_TO"
+done
 
 set_env() { # name, value
   local name="$1" value="$2" tmp
