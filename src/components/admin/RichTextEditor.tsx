@@ -20,7 +20,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 type ImageBucket = 'product-images' | 'blog-images' | 'site-images' | 'parts-images';
@@ -304,11 +303,13 @@ function LinkDialog({ editor, open, onOpenChange }: { editor: Editor; open: bool
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      {/* Fits small screens (side margin, scrolls when taller than the screen). */}
+      <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-lg">
         <DialogHeader>
           <DialogTitle>Insert link</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
+        {/* min-w-0: a grid item otherwise grows to its widest content (long page titles) and spills out of the panel. */}
+        <div className="min-w-0 space-y-4">
           {!hasSelection && (
             <div className="space-y-2">
               <Label htmlFor="rte-link-text">Text to display</Label>
@@ -326,33 +327,33 @@ function LinkDialog({ editor, open, onOpenChange }: { editor: Editor; open: bool
             />
           </div>
           <div className="space-y-2">
-            <Label>Or link to a page on this site</Label>
+            <Label htmlFor="rte-link-search">Or link to a page on this site</Label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search products, blog, services…" className="pl-9" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+              <Input id="rte-link-search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search products, blog, services…" className="pl-9" />
             </div>
-            <ScrollArea className="h-40 rounded-md border">
-              <div className="p-1">
-                {filtered.map((t) => (
-                  <button
-                    key={t.href}
-                    type="button"
-                    onClick={() => { setUrl(t.href); if (!text) setText(t.label); }}
-                    className={cn(
-                      'flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-accent',
-                      url === t.href && 'bg-primary/10 text-primary',
-                    )}
-                  >
-                    <span className="truncate">{t.label}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">{t.kind}</span>
-                  </button>
-                ))}
-                {filtered.length === 0 && <p className="p-2 text-sm text-muted-foreground">No matches</p>}
-              </div>
-            </ScrollArea>
+            {/* Native scrolling (not ScrollArea, whose inner table layout stretches to the longest title). */}
+            <div data-link-results className="h-44 overflow-y-auto overflow-x-hidden rounded-md border p-1">
+              {filtered.map((t) => (
+                <button
+                  key={t.href}
+                  type="button"
+                  title={t.label}
+                  onClick={() => { setUrl(t.href); if (!text) setText(t.label); }}
+                  className={cn(
+                    'flex w-full min-w-0 items-center justify-between gap-3 rounded px-2 py-1.5 text-left text-sm hover:bg-accent',
+                    url === t.href && 'bg-primary/10 text-primary',
+                  )}
+                >
+                  <span className="min-w-0 flex-1 truncate">{t.label}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">{t.kind}</span>
+                </button>
+              ))}
+              {filtered.length === 0 && <p className="p-2 text-sm text-muted-foreground">No matches</p>}
+            </div>
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="gap-2 sm:gap-0">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button type="button" onClick={apply} disabled={!url.trim()}>Apply</Button>
         </DialogFooter>
