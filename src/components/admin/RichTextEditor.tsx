@@ -4,7 +4,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
 import { TableKit } from '@tiptap/extension-table';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough, Heading2, Heading3, Heading4, Pilcrow,
   List, ListOrdered, Quote, Minus, Link2, Unlink, ImagePlus, RemoveFormatting, Undo2, Redo2, Code2, Search, Upload, Loader2,
@@ -13,7 +13,8 @@ import {
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { contentToHtml, sanitizeHtml } from '@/lib/content';
-import { uploadImage } from '@/lib/imageUpload';
+import { listMedia, uploadToLibrary } from '@/lib/mediaLibrary';
+import { MediaPicker, mediaQueryKey } from '@/components/admin/MediaPicker';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -29,7 +30,7 @@ interface RichTextEditorProps {
   onChange: (html: string) => void;
   label?: string;
   placeholder?: string;
-  /** Storage bucket for images inserted into the content. */
+  /** @deprecated Not used any more: images inserted in the editor are stored in the Media Library. */
   imageBucket?: ImageBucket;
   /** Uploaded images are named from this (usually the item's slug), e.g. my-post.webp. */
   imageFileBase?: string;
@@ -42,7 +43,6 @@ export default function RichTextEditor({
   onChange,
   label,
   placeholder = 'Start writing…',
-  imageBucket = 'site-images',
   imageFileBase,
   minHeight = 220,
   id,
@@ -124,7 +124,7 @@ export default function RichTextEditor({
       {editor && (
         <>
           <LinkDialog editor={editor} open={linkOpen} onOpenChange={setLinkOpen} />
-          <ImageDialog editor={editor} open={imageOpen} onOpenChange={setImageOpen} bucket={imageBucket} fileBase={imageFileBase} />
+          <ImageDialog editor={editor} open={imageOpen} onOpenChange={setImageOpen} fileBase={imageFileBase} />
         </>
       )}
     </div>
@@ -268,17 +268,19 @@ function LinkDialog({ editor, open, onOpenChange }: { editor: Editor; open: bool
     enabled: open,
     staleTime: 60_000,
     queryFn: async (): Promise<LinkTarget[]> => {
-      const [posts, products, services, categories] = await Promise.all([
+      const [posts, products, services, categories, media] = await Promise.all([
         supabase.from('blog_posts').select('title, slug, id').eq('published', true),
         supabase.from('products').select('name, slug, id'),
         supabase.from('services').select('title, slug').eq('published', true),
         supabase.from('categories').select('name, slug'),
+        listMedia('library').catch(() => []),
       ]);
       return [
         ...(posts.data || []).map((p) => ({ label: p.title, href: `/blog/${p.slug || p.id}`, kind: 'Blog' })),
         ...(products.data || []).map((p) => ({ label: p.name, href: `/products/${p.slug || p.id}`, kind: 'Product' })),
         ...(services.data || []).map((s) => ({ label: s.title, href: `/services/${s.slug}`, kind: 'Service' })),
         ...(categories.data || []).map((c) => ({ label: c.name, href: `/category/${c.slug}`, kind: 'Category' })),
+        ...media.map((m) => ({ label: m.name, href: m.url, kind: 'Image' })),
       ];
     },
   });
@@ -330,7 +332,7 @@ function LinkDialog({ editor, open, onOpenChange }: { editor: Editor; open: bool
             <Label htmlFor="rte-link-search">Or link to a page on this site</Label>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-              <Input id="rte-link-search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search products, blog, services…" className="pl-9" />
+              <Input id="rte-link-search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search pages and Media Library images…" className="pl-9" />
             </div>
             {/* Native scrolling (not ScrollArea, whose inner table layout stretches to the longest title). */}
             <div data-link-results className="h-44 overflow-y-auto overflow-x-hidden rounded-md border p-1">
@@ -365,8 +367,10 @@ function LinkDialog({ editor, open, onOpenChange }: { editor: Editor; open: bool
 /* ------------------------------------------------------------------------- */
 
 function ImageDialog({
-  editor, open, onOpenChange, bucket, fileBase,
-}: { editor: Editor; open: boolean; onOpenChange: (o: boolean) => void; bucket: ImageBucket; fileBase?: string }) {
+  editor, open, onOpenChange, fileBase,
+}: { editor: Editor; open: boolean; onOpenChange: (o: boolean) => void; fileBase?: string }) {
+  const queryClient = useQueryClient();
+  const [browsing, setBrowsing] = useState(false);
   const [src, setSrc] = useState('');
   const [alt, setAlt] = useState('');
   const [decorative, setDecorative] = useState(false);
@@ -382,6 +386,7 @@ function ImageDialog({
     setSrc((attrs.src as string) || '');
     setAlt((attrs.alt as string) || '');
     setDecorative(isImage && attrs.alt === '');
+    setBrowsing(false);
   }, [open, editor]);
 
   const upload = async (file: File) => {
@@ -389,7 +394,9 @@ function ImageDialog({
     if (file.size > 5 * 1024 * 1024) { toast.error('Image must be less than 5MB'); return; }
     setUploading(true);
     try {
-      setSrc(await uploadImage(bucket, file, { nameBase: fileBase, folder: 'content' }));
+      // Editor uploads go to the Media Library and use the site's own address (/media/...).
+      setSrc(await uploadToLibrary(file, fileBase));
+      queryClient.invalidateQueries({ queryKey: mediaQueryKey('library') });
     } catch (error) {
       toast.error((error as Error).message || 'Upload failed');
     } finally {
@@ -409,16 +416,29 @@ function ImageDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className={cn('max-h-[90vh] w-[calc(100%-2rem)] overflow-y-auto rounded-lg', browsing ? 'max-w-3xl' : 'max-w-md')}>
         <DialogHeader>
           <DialogTitle>{editing ? 'Edit image' : 'Insert image'}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          {src && <img src={src} alt={alt || 'Preview'} className="max-h-40 w-full rounded border object-contain bg-muted" />}
-          <div className="flex gap-2">
+        <div className="min-w-0 space-y-4">
+          {src && !browsing && <img src={src} alt={alt || 'Preview'} className="max-h-40 w-full rounded border object-contain bg-muted" />}
+          {browsing && (
+            <MediaPicker
+              mode="pick"
+              compact
+              allowUpload={false}
+              selectedUrl={src}
+              onPick={(item) => { setSrc(item.url); setBrowsing(false); }}
+            />
+          )}
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Button type="button" variant="outline" className="flex-1" disabled={uploading} onClick={() => fileRef.current?.click()}>
               {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
               {uploading ? 'Uploading…' : 'Upload image'}
+            </Button>
+            <Button type="button" variant="outline" className="flex-1" onClick={() => setBrowsing((b) => !b)}>
+              <ImagePlus className="mr-2 h-4 w-4" />
+              {browsing ? 'Hide Media Library' : 'Choose from Media Library'}
             </Button>
             <input
               ref={fileRef}
@@ -429,8 +449,8 @@ function ImageDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="rte-img-src">Or image URL</Label>
-            <Input id="rte-img-src" value={src} onChange={(e) => setSrc(e.target.value)} placeholder="https://…" />
+            <Label htmlFor="rte-img-src">Image address</Label>
+            <Input id="rte-img-src" value={src} onChange={(e) => setSrc(e.target.value)} placeholder="https://mrbedmed.com/media/…" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="rte-img-alt">
@@ -444,7 +464,7 @@ function ImageDialog({
             <p className="text-xs text-muted-foreground">Read by screen readers and used by Google Images.</p>
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="gap-2 sm:gap-0">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button type="button" onClick={apply} disabled={!src.trim() || !altReady || uploading}>
             {editing ? 'Update' : 'Insert'}

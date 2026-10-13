@@ -27,6 +27,7 @@ import {
   Newspaper,
   History,
   TrendingUp,
+  Images,
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -103,6 +104,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { path: '/admin/parts', icon: Wrench, label: 'Parts' },
     { path: '/admin/services', icon: Wrench, label: 'Services' },
     { path: '/admin/blog', icon: FileText, label: 'Blog Posts' },
+    { path: '/admin/media', icon: Images, label: 'Media Library' },
     { path: '/admin/faqs', icon: HelpCircle, label: 'FAQs' },
     { path: '/admin/orders', icon: ShoppingCart, label: 'Orders', badge: pendingOrdersCount },
     { path: '/admin/messages', icon: MessageSquare, label: 'Messages', badge: unreadMessagesCount },

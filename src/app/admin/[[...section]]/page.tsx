@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: { absolute: 'Admin | Mr.Bedmed' }, ro
 const SECTION_KEYS: Record<AdminSection, true> = {
   '': true, products: true, categories: true, parts: true, services: true, blog: true, faqs: true, orders: true,
   messages: true, settings: true, 'home-cards': true, 'contact-settings': true, redirects: true, about: true,
-  'contact-page': true, pages: true, footer: true, newsletter: true, 'recently-deleted': true, seo: true,
+  'contact-page': true, pages: true, footer: true, newsletter: true, 'recently-deleted': true, seo: true, media: true,
 };
 const SECTIONS = Object.keys(SECTION_KEYS) as AdminSection[];
 
