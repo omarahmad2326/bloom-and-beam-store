@@ -26,6 +26,7 @@ import {
   PanelBottom,
   Newspaper,
   History,
+  TrendingUp,
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -107,6 +108,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { path: '/admin/messages', icon: MessageSquare, label: 'Messages', badge: unreadMessagesCount },
     { path: '/admin/newsletter', icon: Newspaper, label: 'Newsletter' },
     { path: '/admin/settings', icon: Settings, label: 'Site Settings' },
+    { path: '/admin/seo', icon: TrendingUp, label: 'SEO & Tracking' },
     { path: '/admin/contact-settings', icon: Phone, label: 'Contact Info' },
     { path: '/admin/redirects', icon: CornerUpRight, label: 'Redirects' },
     { path: '/admin/recently-deleted', icon: History, label: 'Recently Deleted' },

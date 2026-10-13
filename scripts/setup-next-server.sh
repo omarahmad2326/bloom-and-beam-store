@@ -110,7 +110,7 @@ check "product page source has its canonical"          "$PRODUCT" 200 '<link rel
 check "product page source has Product schema"         "$PRODUCT" 200 '"@type":"Product"'
 check "unknown page answers 404"                       "$SITE/no-such-page-$RANDOM" 404
 check "sitemap.xml"                                    "$SITE/sitemap.xml" 200 '<urlset'
-check "robots.txt (static file from public/)"          "$SITE/robots.txt" 200
+check "robots.txt"                                     "$SITE/robots.txt" 200 "Sitemap:"
 ASSET="$(curl -s --max-time 20 "$SITE/?nocache=$RANDOM" | grep -o '/_next/static/[^"]*\.js' | head -1 || true)"
 if [ -n "$ASSET" ]; then check "built JS asset ($ASSET)" "$SITE$ASSET" 200; else printf '   \033[1;31mFAIL\033[0m no /_next/static asset in the home page\n'; FAILED=1; fi
 printf '   %-48s %s\n' "uppercase category (expect 301)" "$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$SITE/category/ICU-beds")"

@@ -12,6 +12,7 @@ import { defaultContactInfo, type ContactInfo } from '@/lib/contactInfo';
 import { FOOTER_SETTINGS_KEY, withFooterDefaults } from '@/lib/footer';
 import { ABOUT_SETTINGS_KEY, withAboutDefaults } from '@/lib/aboutPage';
 import { CONTACT_SETTINGS_KEY, withContactDefaults } from '@/lib/contactPage';
+import { SEO_SETTINGS_KEY, withSeoDefaults } from '@/lib/seoSettings';
 
 type Product = Tables<'products'>;
 type Category = Tables<'categories'>;
@@ -37,6 +38,14 @@ export const queries = {
         ...defaultContactInfo,
         ...((await siteSettingValue('contact_info')) as Partial<ContactInfo> | null),
       }),
+    }),
+
+  /** Dashboard → SEO & Tracking (verification codes, analytics ids, site-wide schema, robots.txt, llms.txt). */
+  seoSettings: () =>
+    queryOptions({
+      queryKey: ['site-setting', SEO_SETTINGS_KEY],
+      staleTime: 5 * MINUTE,
+      queryFn: async () => withSeoDefaults(await siteSettingValue(SEO_SETTINGS_KEY)),
     }),
 
   footer: () =>
