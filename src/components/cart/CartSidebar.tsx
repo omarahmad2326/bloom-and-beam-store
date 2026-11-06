@@ -22,8 +22,9 @@ export function CartSidebar() {
       {/* Sidebar */}
       <div
         className={cn(
-          'fixed top-0 right-0 h-full w-full md:w-[450px] bg-card z-50 shadow-2xl transition-transform duration-300 ease-out',
-          isCartOpen ? 'translate-x-0' : 'translate-x-full'
+          'fixed top-0 right-0 h-full w-full md:w-[450px] bg-card z-50 transition-transform duration-300 ease-out',
+          // Shadow only while open: a closed panel's shadow shows along the right edge of the screen.
+          isCartOpen ? 'translate-x-0 shadow-2xl' : 'translate-x-full'
         )}
       >
         <div className="flex flex-col h-full">

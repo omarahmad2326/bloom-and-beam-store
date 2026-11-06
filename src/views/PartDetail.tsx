@@ -164,12 +164,12 @@ const PartDetail = () => {
             <ArrowLeft className="h-4 w-4" /> Back to Parts
           </Link>
 
-          <div className="grid lg:grid-cols-2 gap-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
             {/* Images Section */}
             <div className="space-y-4">
               {/* Main Image */}
               <div 
-                className="relative bg-white rounded-2xl p-8 border group cursor-zoom-in"
+                className="relative bg-white rounded-2xl p-4 sm:p-8 border group cursor-zoom-in"
                 onClick={openLightbox}
               >
                 {images.length > 0 ? (
@@ -177,7 +177,7 @@ const PartDetail = () => {
                     <img
                       src={images[currentImageIndex]}
                       alt={altFor(currentImageIndex)}
-                      className="w-full h-96 object-contain transition-transform duration-300 group-hover:scale-105"
+                      className="w-full h-64 sm:h-96 object-contain transition-transform duration-300 group-hover:scale-105"
                     />
                     
                     {/* Zoom Indicator */}
@@ -189,13 +189,15 @@ const PartDetail = () => {
                       <>
                         <button
                           onClick={(e) => { e.stopPropagation(); prevImage(); }}
-                          className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/90 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-background"
+                          aria-label="Previous image"
+                          className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-background/90 p-2 rounded-full opacity-0 group-hover:opacity-100 touch:opacity-100 transition-opacity shadow-lg hover:bg-background"
                         >
                           <ChevronLeft className="h-5 w-5" />
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); nextImage(); }}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/90 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-background"
+                          aria-label="Next image"
+                          className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-background/90 p-2 rounded-full opacity-0 group-hover:opacity-100 touch:opacity-100 transition-opacity shadow-lg hover:bg-background"
                         >
                           <ChevronRight className="h-5 w-5" />
                         </button>
@@ -267,8 +269,8 @@ const PartDetail = () => {
               )}
 
               {/* Add to Cart */}
-              <div className="flex items-center gap-4 pt-6 border-t">
-                <div className="flex items-center gap-3 bg-muted rounded-lg p-2">
+              <div className="flex flex-wrap items-center gap-4 pt-6 border-t">
+                <div className="flex shrink-0 items-center gap-3 bg-muted rounded-lg p-2">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     className="w-10 h-10 flex items-center justify-center rounded hover:bg-background transition-colors"
@@ -286,7 +288,7 @@ const PartDetail = () => {
                 <Button
                   onClick={handleAddToCart}
                   size="lg"
-                  className="flex-1 btn-shine"
+                  className="min-w-[10rem] flex-1 px-4 sm:px-8 btn-shine"
                   disabled={!part.in_stock}
                 >
                   <ShoppingCart className="mr-2 h-5 w-5" />
@@ -375,13 +377,13 @@ const PartDetail = () => {
             <>
               <button
                 onClick={(e) => { e.stopPropagation(); prevImage(); }}
-                className="absolute left-4 top-1/2 -translate-y-1/2 w-14 h-14 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors"
+                className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-14 sm:h-14 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors"
               >
                 <ChevronLeft className="h-8 w-8 text-white" />
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); nextImage(); }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 w-14 h-14 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors"
+                className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-14 sm:h-14 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors"
               >
                 <ChevronRight className="h-8 w-8 text-white" />
               </button>

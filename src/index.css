@@ -163,17 +163,22 @@
     @apply transition-all duration-300 ease-out;
   }
 
-  .card-hover:hover {
-    @apply -translate-y-2;
-    box-shadow: var(--shadow-lg);
+  /* Mouse only: on touch screens :hover sticks after a tap. */
+  @media (hover: hover) {
+    .card-hover:hover {
+      @apply -translate-y-2;
+      box-shadow: var(--shadow-lg);
+    }
   }
 
   .rotate-360-hover {
     transition: transform 1s ease-in-out;
   }
 
-  .group:hover .rotate-360-hover {
-    transform: rotateY(360deg);
+  @media (hover: hover) {
+    .group:hover .rotate-360-hover {
+      transform: rotateY(360deg);
+    }
   }
 
   .text-gradient {

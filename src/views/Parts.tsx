@@ -64,13 +64,15 @@ const PartImageCarousel = ({ images, name, alts }: { images: string[]; name: str
         <>
           <button
             onClick={(e) => { e.stopPropagation(); prev(); }}
-            className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/90 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+            aria-label="Previous image"
+            className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/90 p-1.5 rounded-full opacity-0 group-hover:opacity-100 touch:opacity-100 transition-opacity shadow-md"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); next(); }}
-            className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/90 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+            aria-label="Next image"
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/90 p-1.5 rounded-full opacity-0 group-hover:opacity-100 touch:opacity-100 transition-opacity shadow-md"
           >
             <ChevronRight className="h-4 w-4" />
           </button>

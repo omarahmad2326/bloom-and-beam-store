@@ -136,7 +136,8 @@ const Products = () => {
             <Button
               variant="ghost"
               size="icon"
-              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-background/80 shadow-md"
+              aria-label="Scroll categories left"
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-background shadow-md"
               onClick={() => scrollSlider('left')}
             >
               <ChevronLeft className="h-4 w-4" />
@@ -162,7 +163,8 @@ const Products = () => {
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-background/80 shadow-md"
+              aria-label="Scroll categories right"
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-background shadow-md"
               onClick={() => scrollSlider('right')}
             >
               <ChevronRight className="h-4 w-4" />

@@ -180,11 +180,11 @@ const ProductDetail = () => {
             <ArrowLeft className="h-4 w-4" /> Back
           </Link>
 
-          <div className="grid lg:grid-cols-2 gap-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
             {/* Image Carousel */}
             <div className="space-y-4">
               <div 
-                className="relative bg-muted rounded-2xl p-8 aspect-square overflow-hidden group cursor-zoom-in"
+                className="relative bg-muted rounded-2xl p-4 sm:p-8 aspect-square overflow-hidden group cursor-zoom-in"
                 onClick={() => openLightbox()}
               >
                 {allImages.length > 0 ? (
@@ -211,13 +211,15 @@ const ProductDetail = () => {
                   <>
                     <button
                       onClick={(e) => { e.stopPropagation(); prevImage(); }}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-background transition-colors opacity-0 group-hover:opacity-100"
+                      aria-label="Previous image"
+                      className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-background transition-colors opacity-0 group-hover:opacity-100 touch:opacity-100"
                     >
                       <ChevronLeft className="h-6 w-6" />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); nextImage(); }}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-background transition-colors opacity-0 group-hover:opacity-100"
+                      aria-label="Next image"
+                      className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-background transition-colors opacity-0 group-hover:opacity-100 touch:opacity-100"
                     >
                       <ChevronRight className="h-6 w-6" />
                     </button>
@@ -306,8 +308,8 @@ const ProductDetail = () => {
                   <h3 className="font-display font-bold">Features:</h3>
                   <ul className="space-y-2">
                     {product.features.map((f, i) => (
-                      <li key={i} className="flex items-center gap-2">
-                        <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
+                      <li key={i} className="flex items-start gap-2">
+                        <Check className="mt-0.5 h-5 w-5 text-green-600 flex-shrink-0" />
                         <span>{f}</span>
                       </li>
                     ))}
@@ -316,8 +318,8 @@ const ProductDetail = () => {
               )}
 
               <div className="flex flex-col gap-4 pt-6 border-t">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-3 bg-muted rounded-lg p-2">
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex shrink-0 items-center gap-3 bg-muted rounded-lg p-2">
                     <button 
                       onClick={() => setQuantity(Math.max(1, quantity - 1))} 
                       className="w-10 h-10 flex items-center justify-center rounded hover:bg-background transition-colors"
@@ -335,7 +337,7 @@ const ProductDetail = () => {
                   <Button 
                     onClick={handleAddToCart} 
                     size="lg" 
-                    className="flex-1 btn-shine"
+                    className="min-w-[10rem] flex-1 px-4 sm:px-8 btn-shine"
                     disabled={!product.in_stock}
                   >
                     <ShoppingCart className="mr-2 h-5 w-5" />
@@ -359,7 +361,7 @@ const ProductDetail = () => {
           {relatedProducts && relatedProducts.length > 0 && (
             <div className="mt-16 pt-12 border-t">
               <h2 className="font-display text-2xl md:text-3xl font-bold mb-8">Related Products</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                 {relatedProducts.map((relProduct) => (
                   <div 
                     key={relProduct.id}
@@ -411,13 +413,13 @@ const ProductDetail = () => {
             <>
               <button
                 onClick={(e) => { e.stopPropagation(); prevImage(); }}
-                className="absolute left-4 top-1/2 -translate-y-1/2 w-14 h-14 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors"
+                className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-14 sm:h-14 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors"
               >
                 <ChevronLeft className="h-8 w-8 text-white" />
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); nextImage(); }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 w-14 h-14 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors"
+                className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-14 sm:h-14 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors"
               >
                 <ChevronRight className="h-8 w-8 text-white" />
               </button>

@@ -64,7 +64,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
         </Link>
 
         {/* Quick Actions */}
-        <div className="absolute inset-x-0 bottom-0 p-4 flex gap-2 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+        <div className="absolute inset-x-0 bottom-0 p-4 flex touch:hidden gap-2 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
           <Button
             onClick={handleAddToCart}
             className="flex-1 btn-shine"
@@ -103,7 +103,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
         </span>
 
         <Link to={`/products/${product.slug || product.id}`}>
-          <h3 className="font-display font-bold text-lg mt-1 mb-2 hover:text-primary transition-colors line-clamp-1">
+          <h3 className="font-display font-bold text-lg mt-1 mb-2 hover:text-primary transition-colors line-clamp-2 sm:line-clamp-1">
             {product.name}
           </h3>
         </Link>
@@ -131,6 +131,12 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
         ) : (
           <span className="text-sm text-destructive mt-2">Out of Stock</span>
         )}
+
+        {/* Touch screens have no hover, so the quick action sits here. */}
+        <Button onClick={handleAddToCart} disabled={!product.inStock} className="hidden touch:inline-flex w-full mt-4 btn-shine">
+          <ShoppingCart className="h-4 w-4 mr-2" />
+          Add to Cart
+        </Button>
       </div>
     </div>
   );

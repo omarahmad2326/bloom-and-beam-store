@@ -144,5 +144,9 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    // touch: styles for devices without hover (phones, tablets), where hover-only controls never appear.
+    ({ addVariant }: { addVariant: (name: string, definition: string) => void }) => addVariant("touch", "@media (hover: none)"),
+  ],
 } satisfies Config;
