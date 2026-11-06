@@ -259,8 +259,9 @@ const ProductDetail = () => {
               )}
             </div>
 
-            {/* Product Info */}
-            <div className="space-y-6">
+            {/* Product Info. Below lg, the description and features move under the buttons (order-1), so
+                Add to Cart is not thousands of pixels down the page; desktop keeps the source order. */}
+            <div className="flex min-w-0 flex-col gap-6 lg:block lg:space-y-6">
               <span className="text-primary font-medium uppercase text-sm">{product.category}</span>
               <h1 className="font-display text-3xl md:text-4xl font-bold">{product.name}</h1>
               
@@ -300,11 +301,11 @@ const ProductDetail = () => {
               )}
 
               {product.description && (
-                <RichContent content={product.description} className="max-w-none" />
+                <RichContent content={product.description} className="order-1 max-w-none" />
               )}
 
               {product.features && product.features.length > 0 && (
-                <div className="space-y-3">
+                <div className="order-1 space-y-3">
                   <h3 className="font-display font-bold">Features:</h3>
                   <ul className="space-y-2">
                     {product.features.map((f, i) => (
